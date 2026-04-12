@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LayerRec Lite</title>
+  <style>
+    :root {
+      --bg: #111318;
+      --panel: #1b1f27;
+      --panel2: #232937;
+      --text: #f4f7fb;
+      --muted: #9ca8bd;
+      --line: #333b4d;
+      --accent: #54d2ff;
+      --danger: #ff5c7a;
+      --good: #76e39f;
+      --warn: #ffd166;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #101217, #151a23 55%, #0f1217);
+      color: var(--text);
+    }
+    .app {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+    h1 { margin: 0 0 14px; font-size: 28px; letter-spacing: 0.06em; }
+    .sub { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
+    .card {
+      background: rgba(27,31,39,.95);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      margin-bottom: 14px;
+      box-shadow: 0 10px 28px rgba(0,0,0,.18);
+    }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .grow { flex: 1; }
+    .label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    input[type="number"], select, input[type="file"] {
+      background: var(--panel2);
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      min-height: 42px;
+    }
+    button {
+      background: var(--panel2);
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      min-height: 42px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button:hover { filter: brightness(1.07); }
+    button.primary { border-color: #2f6fff; background: #1c3f8f; }
+    button.danger { border-color: #8f3048; background: #602234; }
+    button.good { border-color: #2f7e4d; background: #205535; }
+    button.active { outline: 2px solid var(--accent); }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    .pill { padding: 6px 10px; border-radius: 999px; background: #18202c; border: 1px solid var(--line); font-size: 12px; }
+    .status { font-weight: 700; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(140px, 1fr));
+      gap: 10px;
+    }
+    .tracks { display: grid; gap: 8px; }
+    .track {
+      display: grid;
+      grid-template-columns: 56px 1.6fr 110px 110px 110px 110px 130px;
+      gap: 8px;
+      align-items: center;
+      background: #171c25;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px;
+    }
+    .track.selected { outline: 2px solid var(--accent); }
+    .track-name { font-weight: 700; }
+    .mini { font-size: 12px; color: var(--muted); }
+    .timeline {
+      height: 18px;
+      background: #0f1319;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      overflow: hidden;
+      position: relative;
+    }
+    .timeline .fill {
+      height: 100%;
+      background: linear-gradient(90deg, #4bbfff, #7bf2b5);
+      width: 0%;
+    }
+    .head-line {
+      display: grid;
+      grid-template-columns: 56px 1.6fr 110px 110px 110px 110px 130px;
+      gap: 8px;
+      padding: 0 10px 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .footer { color: var(--muted); font-size: 12px; line-height: 1.6; }
+    a { color: #8edcff; }
+    @media (max-width: 920px) {
+      .grid { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
+      .track, .head-line { grid-template-columns: 46px 1fr 86px 86px 86px 86px; }
+      .import-cell { grid-column: 2 / -1; }
+    }
+    @media (max-width: 640px) {
+      .track, .head-line { grid-template-columns: 40px 1fr 78px 78px 78px; }
+      .hide-sm { display: none; }
+      .grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>LAYERREC LITE</h1>
+    <div class="sub">ブラウザで重ね録りする軽量版です。録音・再生・ループ・メトロノーム・JSON保存・WAV書き出しに対応しています。</div>
+
+    <div class="card sticky-transport">
+      <div class="row" style="justify-content: space-between; align-items: flex-start;">
+        <div>
+          <div class="pill status" id="statusText">Ready</div>
+          <div class="sub" id="transportInfo">0 tracks · 120 BPM · 4 bars</div>
+        </div>
+        <div class="row">
+          <div class="pill">Position <span id="positionText">0.00</span>s</div>
+          <div class="pill">Loop <span id="loopText">8.00</span>s</div>
+          <div class="pill">Input <span id="micText">MIC OFF</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card grid">
+      <div>
+        <div class="label">BPM</div>
+        <input id="bpmInput" type="number" min="40" max="240" step="1" value="120" />
+      </div>
+      <div>
+        <div class="label">Bars</div>
+        <select id="barsInput">
+          <option>1</option>
+          <option>2</option>
+          <option selected>4</option>
+          <option>8</option>
+          <option>16</option>
+        </select>
+      </div>
+      <div>
+        <div class="label">Selected Track</div>
+        <select id="trackSelect"></select>
+      </div>
+      <div>
+        <div class="label">Master Volume</div>
+        <input id="masterVol" type="range" min="0" max="1.2" step="0.01" value="1" />
+      </div>
+      <div>
+        <div class="label">Click Volume</div>
+        <input id="clickVol" type="range" min="0" max="1" step="0.01" value="0.35" />
+      </div>
+      <div>
+        <div class="label">Rec Delay補正(ms)</div>
+        <input id="latencyMsInput" type="number" min="0" max="500" step="5" value="120" />
+      </div>
+      <div>
+        <div class="label">Auto Save</div>
+        <button id="autosaveBtn" class="active">Auto Save ON</button>
+      </div>
+      <div>
+        <div class="label">復元</div>
+        <button id="restoreAutosaveBtn">Auto Save復元</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <button id="initMicBtn">MIC ON</button>
+        <button id="metroBtn">♩ Metro</button>
+        <button id="countBtn">1234 Count</button>
+        <button id="loopBtn" class="active">↺ Loop</button>
+        <button id="overdubBtn">⊕ Overdub</button>
+        <button id="playBtn" class="primary">▶ Play</button>
+        <button id="recBtn" class="danger">● Rec</button>
+        <button id="stopBtn">■ Stop</button>
+        <button id="clearTrackBtn">選択トラック削除</button>
+        <button id="clearAllBtn">全消去</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content: space-between;">
+        <strong>Tracks</strong>
+        <div class="mini">録音は選択中トラックに入ります。音源読込でも各トラックへ配置できます。</div>
+      </div>
+      <div class="head-line">
+        <div>#</div>
+        <div>Clip</div>
+        <div>Mute</div>
+        <div>Solo</div>
+        <div class="hide-sm">Gain</div>
+        <div class="hide-sm">Pan</div>
+        <div class="import-cell">Import</div>
+      </div>
+      <div id="tracks" class="tracks"></div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <button id="exportWavBtn" class="good">↓ WAV Export</button>
+        <button id="saveProjectBtn">↗ Project書き出し</button>
+        <label class="button-like">
+          <input id="loadProjectInput" type="file" accept="application/json" />
+        </label>
+        <span class="mini">Project読み込みはJSONファイルを選択してください。</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="align-items:end; flex-wrap:wrap; gap:12px;">
+        <div style="min-width:220px; flex:1;">
+          <div class="label">IndexedDB 保存名</div>
+          <input id="projectNameInput" type="text" placeholder="例: chorus-take-01" />
+        </div>
+        <div class="row">
+          <button id="saveIdbBtn" class="good">💾 IndexedDB保存</button>
+          <button id="loadIdbBtn">↺ IndexedDB読込</button>
+          <button id="deleteIdbBtn" class="danger">✕ 削除</button>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px; align-items:end; flex-wrap:wrap; gap:12px;">
+        <div style="min-width:240px; flex:1;">
+          <div class="label">保存済みプロジェクト</div>
+          <select id="projectsSelect"></select>
+        </div>
+        <div class="mini" id="storageInfo">IndexedDB: 初期化前</div>
+      </div>
+    </div>
+
+    <div class="card footer">
+      <div>実装メモ:</div>
+      <div>・自動保存は IndexedDB 優先です。非対応環境のみ localStorage にフォールバックします。</div>
+      <div>・録音は MediaRecorder / Web Audio 併用です。Safari / iPhone ではブラウザ制約により挙動差が出る可能性があります。</div>
+      <div>・MP3 は未対応です。まずは WAV と Project 保存を優先しています。</div>
+      <div>・Overdub は同一トラックの既存音声と新録音を合成します。</div>
+    </div>
+  </div>
+
+  <script>
+    const TRACK_COUNT = 10;
+    const tracks = [];
+    const trackEls = [];
+    let audioCtx = null;
+    let masterGain = null;
+    let mediaStream = null;
+    let mediaRecorder = null;
+    let recordChunks = [];
+    let isPlaying = false;
+    let isRecording = false;
+    let transportTimer = null;
+    let loopScheduler = null;
+    let loopStartTime = 0;
+    let nextLoopAt = 0;
+    let scheduledClickTimes = new Set();
+    let activeSources = [];
+
+    const state = {
+      bpm: 120,
+      bars: 4,
+      selectedTrack: 0,
+      metro: false,
+      countIn: false,
+      loop: true,
+      overdub: false,
+      masterVolume: 1,
+      clickVolume: 0.35,
+      latencyMs: 120,
+      autoSave: true,
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const bpmInput = $('bpmInput');
+    const barsInput = $('barsInput');
+    const trackSelect = $('trackSelect');
+    const tracksWrap = $('tracks');
+    const statusText = $('statusText');
+    const transportInfo = $('transportInfo');
+    const positionText = $('positionText');
+    const loopText = $('loopText');
+    const micText = $('micText');
+    const masterVol = $('masterVol');
+    const clickVol = $('clickVol');
+    const projectNameInput = $('projectNameInput');
+    const projectsSelect = $('projectsSelect');
+    const storageInfo = $('storageInfo');
+    const latencyMsInput = $('latencyMsInput');
+    const autosaveBtn = $('autosaveBtn');
+    const restoreAutosaveBtn = $('restoreAutosaveBtn');
+
+    function loopDuration() {
+      return state.bars * 4 * 60 / state.bpm;
+    }
+
+    const DB_NAME = 'layerrecLiteDB';
+    const DB_VERSION = 1;
+    const STORE_PROJECTS = 'projects';
+    const STORE_META = 'meta';
+    let projectDB = null;
+    let storageMode = 'localStorage';
+
+
+    function isIOSFamily() {
+      const ua = navigator.userAgent || '';
+      return /iPhone|iPad|iPod/i.test(ua);
+    }
+
+    function setStatus(text) {
+      statusText.textContent = text;
+    }
+
+    function queueAutosave() {
+      if (!state.autoSave) return;
+      clearTimeout(autosaveTimer);
+      autosaveTimer = setTimeout(() => {
+        saveAutosave().catch(err => console.warn('autosave failed', err));
+      }, 700);
+    }
+
+    function idbRequest(req) {
+      return new Promise((resolve, reject) => {
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error || new Error('IndexedDB request failed'));
+      });
+    }
+
+    function idbTxDone(tx) {
+      return new Promise((resolve, reject) => {
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error || new Error('IndexedDB transaction failed'));
+        tx.onabort = () => reject(tx.error || new Error('IndexedDB transaction aborted'));
+      });
+    }
+
+    async function initProjectDB() {
+      if (!('indexedDB' in window)) {
+        storageMode = 'localStorage';
+        if (storageInfo) storageInfo.textContent = 'IndexedDB: 非対応 / localStorage使用';
+        return null;
+      }
+      if (projectDB) return projectDB;
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(STORE_PROJECTS)) {
+          const store = db.createObjectStore(STORE_PROJECTS, { keyPath: 'id' });
+          store.createIndex('updatedAt', 'updatedAt', { unique: false });
+        }
+        if (!db.objectStoreNames.contains(STORE_META)) {
+          db.createObjectStore(STORE_META, { keyPath: 'key' });
+        }
+      };
+      projectDB = await new Promise((resolve, reject) => {
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error || new Error('IndexedDB open failed'));
+      });
+      storageMode = 'indexedDB';
+      if (storageInfo) storageInfo.textContent = 'IndexedDB: 利用中';
+      return projectDB;
+    }
+
+    async function setMetaRecord(key, value) {
+      const db = await initProjectDB();
+      if (!db) {
+        localStorage.setItem(`${AUTOSAVE_KEY}:${key}`, JSON.stringify(value));
+        return;
+      }
+      const tx = db.transaction(STORE_META, 'readwrite');
+      tx.objectStore(STORE_META).put({ key, value, updatedAt: new Date().toISOString() });
+      await idbTxDone(tx);
+    }
+
+    async function getMetaRecord(key) {
+      const db = await initProjectDB();
+      if (!db) {
+        const raw = localStorage.getItem(`${AUTOSAVE_KEY}:${key}`);
+        return raw ? JSON.parse(raw) : null;
+      }
+      const tx = db.transaction(STORE_META, 'readonly');
+      const row = await idbRequest(tx.objectStore(STORE_META).get(key));
+      await idbTxDone(tx);
+      return row?.value ?? null;
+    }
+
+    async function putProjectRecord(name, payload) {
+      const db = await initProjectDB();
+      const id = slugifyName(name || `project-${Date.now()}`);
+      const record = {
+        id,
+        name: name || id,
+        updatedAt: new Date().toISOString(),
+        payload,
+      };
+      if (!db) {
+        localStorage.setItem(`${AUTOSAVE_KEY}:project:${id}`, JSON.stringify(record));
+        return record;
+      }
+      const tx = db.transaction(STORE_PROJECTS, 'readwrite');
+      tx.objectStore(STORE_PROJECTS).put(record);
+      await idbTxDone(tx);
+      return record;
+    }
+
+    async function listProjectRecords() {
+      const db = await initProjectDB();
+      if (!db) {
+        const out = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (!key || !key.startsWith(`${AUTOSAVE_KEY}:project:`)) continue;
+          try { out.push(JSON.parse(localStorage.getItem(key))); } catch {}
+        }
+        return out.sort((a, b) => (b?.updatedAt || '').localeCompare(a?.updatedAt || ''));
+      }
+      const tx = db.transaction(STORE_PROJECTS, 'readonly');
+      const rows = await idbRequest(tx.objectStore(STORE_PROJECTS).getAll());
+      await idbTxDone(tx);
+      return (rows || []).sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+    }
+
+    async function getProjectRecord(id) {
+      const db = await initProjectDB();
+      if (!db) {
+        const raw = localStorage.getItem(`${AUTOSAVE_KEY}:project:${id}`);
+        return raw ? JSON.parse(raw) : null;
+      }
+      const tx = db.transaction(STORE_PROJECTS, 'readonly');
+      const row = await idbRequest(tx.objectStore(STORE_PROJECTS).get(id));
+      await idbTxDone(tx);
+      return row || null;
+    }
+
+    async function deleteProjectRecord(id) {
+      const db = await initProjectDB();
+      if (!db) {
+        localStorage.removeItem(`${AUTOSAVE_KEY}:project:${id}`);
+        return;
+      }
+      const tx = db.transaction(STORE_PROJECTS, 'readwrite');
+      tx.objectStore(STORE_PROJECTS).delete(id);
+      await idbTxDone(tx);
+    }
+
+    function slugifyName(name) {
+      return String(name || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9぀-ヿ㐀-龿_-]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 60) || `project-${Date.now()}`;
+    }
+
+    async function refreshProjectList(selectedId = '') {
+      const rows = await listProjectRecords();
+      projectsSelect.innerHTML = '';
+      if (!rows.length) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = '保存済みプロジェクトなし';
+        projectsSelect.appendChild(opt);
+      } else {
+        for (const row of rows) {
+          const opt = document.createElement('option');
+          opt.value = row.id;
+          const dt = row.updatedAt ? new Date(row.updatedAt).toLocaleString() : '';
+          opt.textContent = `${row.name} (${dt})`;
+          projectsSelect.appendChild(opt);
+        }
+      }
+      if (selectedId) projectsSelect.value = selectedId;
+      if (storageInfo) storageInfo.textContent = `${storageMode === 'indexedDB' ? 'IndexedDB' : 'localStorage'}: ${rows.length}件保存`;
+    }
+
+    async function saveAutosave() {
+      const payload = await buildProjectData(true);
+      await setMetaRecord('autosave', payload);
+      setStatus('Auto saved');
+    }
+
+    async function restoreAutosave() {
+      const data = await getMetaRecord('autosave');
+      if (!data) throw new Error('自動保存データがありません');
+      await applyProjectData(data);
+      setStatus('Auto save restored');
+    }
+
+    async function buildProjectData(includeBuffers = true) {
+      const data = {
+        version: 3,
+        bpm: state.bpm,
+        bars: state.bars,
+        latencyMs: state.latencyMs,
+        autoSave: state.autoSave,
+        createdAt: new Date().toISOString(),
+        tracks: []
+      };
+      for (const track of tracks) {
+        data.tracks.push({
+          name: track.name,
+          mute: track.mute,
+          solo: track.solo,
+          gain: track.gain,
+          pan: track.pan,
+          wavBase64: includeBuffers && track.buffer ? await bufferToBase64Wav(track.buffer) : null,
+        });
+      }
+      return data;
+    }
+
+    async function applyProjectData(data) {
+      await ensureAudio();
+      state.bpm = Number(data.bpm || 120);
+      state.bars = Number(data.bars || 4);
+      state.latencyMs = Number(data.latencyMs ?? state.latencyMs ?? 120);
+      state.autoSave = data.autoSave !== false;
+      bpmInput.value = state.bpm;
+      barsInput.value = String(state.bars);
+      latencyMsInput.value = String(state.latencyMs);
+      $('autosaveBtn').classList.toggle('active', state.autoSave);
+      $('autosaveBtn').textContent = state.autoSave ? 'Auto Save ON' : 'Auto Save OFF';
+      for (let i = 0; i < TRACK_COUNT; i++) {
+        const src = data.tracks?.[i];
+        if (!src) {
+          tracks[i].buffer = null;
+          tracks[i].mute = false;
+          tracks[i].solo = false;
+          tracks[i].gain = 1;
+          tracks[i].pan = 0;
+          continue;
+        }
+        tracks[i].name = src.name || `Track ${i + 1}`;
+        tracks[i].mute = !!src.mute;
+        tracks[i].solo = !!src.solo;
+        tracks[i].gain = Number(src.gain ?? 1);
+        tracks[i].pan = Number(src.pan ?? 0);
+        if (src.wavBase64) {
+          const bytes = Uint8Array.from(atob(src.wavBase64), c => c.charCodeAt(0));
+          const buf = await audioCtx.decodeAudioData(bytes.buffer.slice(0));
+          tracks[i].buffer = trimOrPadBuffer(buf, loopDuration());
+        } else {
+          tracks[i].buffer = null;
+        }
+      }
+      renderTracks();
+      resetEditRange();
+    }
+
+    function updateTransportInfo() {
+      transportInfo.textContent = `${tracks.filter(t => t.buffer).length} tracks · ${state.bpm} BPM · ${state.bars} bars · Delay ${state.latencyMs}ms`;
+      loopText.textContent = loopDuration().toFixed(2);
+    }
+
+    async function ensureAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        masterGain = audioCtx.createGain();
+        masterGain.gain.value = state.masterVolume;
+        masterGain.connect(audioCtx.destination);
+      }
+      if (audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+      }
+    }
+
+    async function initMic() {
+      await ensureAudio();
+      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      micText.textContent = 'MIC ON';
+      $('initMicBtn').classList.add('active');
+      statusText.textContent = 'Mic Ready';
+    }
+
+    function setupTracks() {
+      for (let i = 0; i < TRACK_COUNT; i++) {
+        const track = {
+          id: i,
+          name: `Track ${i + 1}`,
+          buffer: null,
+          mute: false,
+          solo: false,
+          gain: 1,
+          pan: 0,
+        };
+        tracks.push(track);
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = `${i + 1}`;
+        trackSelect.appendChild(opt);
+
+        const el = document.createElement('div');
+        el.className = 'track';
+        el.innerHTML = `
+          <button data-select="${i}">${i + 1}</button>
+          <div>
+            <div class="track-name">Empty</div>
+            <div class="timeline"><div class="fill"></div></div>
+            <div class="mini meta">0.00s</div>
+          </div>
+          <button data-mute="${i}">Mute</button>
+          <button data-solo="${i}">Solo</button>
+          <input class="hide-sm" data-gain="${i}" type="range" min="0" max="1.5" step="0.01" value="1" />
+          <input class="hide-sm" data-pan="${i}" type="range" min="-1" max="1" step="0.01" value="0" />
+          <input class="import-cell" data-import="${i}" type="file" accept="audio/*" />
+        `;
+        tracksWrap.appendChild(el);
+        trackEls.push(el);
+      }
+      renderTracks();
+    }
+
+    function renderTracks() {
+      trackEls.forEach((el, i) => {
+        const t = tracks[i];
+        el.classList.toggle('selected', state.selectedTrack === i);
+        el.querySelector('.track-name').textContent = t.buffer ? `${t.name} loaded` : 'Empty';
+        const dur = t.buffer ? t.buffer.duration : 0;
+        el.querySelector('.meta').textContent = `${dur.toFixed(2)}s ${t.mute ? '· muted' : ''} ${t.solo ? '· solo' : ''}`;
+        const pct = t.buffer ? Math.min(100, (t.buffer.duration / loopDuration()) * 100) : 0;
+        el.querySelector('.fill').style.width = `${pct}%`;
+        const [selectBtn, muteBtn, soloBtn] = el.querySelectorAll('button');
+        muteBtn.classList.toggle('active', t.mute);
+        soloBtn.classList.toggle('active', t.solo);
+        el.querySelector('[data-gain]').value = t.gain;
+        el.querySelector('[data-pan]').value = t.pan;
+      });
+      trackSelect.value = String(state.selectedTrack);
+      updateTransportInfo();
+    }
+
+    function stopAllSources() {
+      activeSources.forEach(src => {
+        try { src.stop(); } catch (_) {}
+      });
+      activeSources = [];
+    }
+
+    function updatePositionLoop() {
+      clearInterval(transportTimer);
+      transportTimer = setInterval(() => {
+        if (!audioCtx || !isPlaying) return;
+        const dur = loopDuration();
+        const pos = Math.max(0, (audioCtx.currentTime - loopStartTime) % dur);
+        positionText.textContent = pos.toFixed(2);
+      }, 50);
+    }
+
+    function hasSolo() {
+      return tracks.some(t => t.solo);
+    }
+
+    function scheduleClick(loopAt, countInOnly = false) {
+      if (!state.metro && !countInOnly) return;
+      const beatDur = 60 / state.bpm;
+      const totalBeats = state.bars * 4;
+      for (let b = 0; b < totalBeats; b++) {
+        const t = loopAt + (b * beatDur);
+        const key = t.toFixed(3) + ':' + (countInOnly ? 'c' : 'm');
+        if (scheduledClickTimes.has(key)) continue;
+        scheduledClickTimes.add(key);
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.value = (b % 4 === 0) ? 1200 : 880;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(state.clickVolume || 0.25, t + 0.003);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+        osc.connect(gain).connect(masterGain);
+        osc.start(t);
+        osc.stop(t + 0.09);
+      }
+    }
+
+    function scheduleLoop(loopAt) {
+      const soloOn = hasSolo();
+      tracks.forEach(track => {
+        if (!track.buffer) return;
+        if (track.mute) return;
+        if (soloOn && !track.solo) return;
+        const src = audioCtx.createBufferSource();
+        src.buffer = track.buffer;
+        const gain = audioCtx.createGain();
+        gain.gain.value = track.gain;
+        const panner = audioCtx.createStereoPanner();
+        panner.pan.value = track.pan;
+        src.connect(gain).connect(panner).connect(masterGain);
+        src.start(loopAt);
+        activeSources.push(src);
+      });
+      if (state.metro) scheduleClick(loopAt, false);
+    }
+
+    function startPlayback() {
+      if (isPlaying) return;
+      const dur = loopDuration();
+      isPlaying = true;
+      loopStartTime = audioCtx.currentTime + 0.08;
+      nextLoopAt = loopStartTime;
+      stopAllSources();
+      scheduledClickTimes.clear();
+      scheduleLoop(nextLoopAt);
+      nextLoopAt += dur;
+      loopScheduler = setInterval(() => {
+        if (!isPlaying) return;
+        if (audioCtx.currentTime + 0.25 >= nextLoopAt) {
+          if (state.loop) {
+            scheduleLoop(nextLoopAt);
+            nextLoopAt += dur;
+          } else {
+            clearInterval(loopScheduler);
+          }
+        }
+      }, 60);
+      updatePositionLoop();
+      statusText.textContent = 'Playing';
+    }
+
+    function stopTransport() {
+      isPlaying = false;
+      isRecording = false;
+      clearInterval(transportTimer);
+      clearInterval(loopScheduler);
+      stopAllSources();
+      positionText.textContent = '0.00';
+      statusText.textContent = 'Stopped';
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+    }
+
+    async function recordSelectedTrack() {
+      await ensureAudio();
+      if (!mediaStream) {
+        await initMic();
+      }
+      if (isRecording) return;
+      const dur = loopDuration();
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : (MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '');
+      mediaRecorder = new MediaRecorder(mediaStream, mimeType ? { mimeType } : undefined);
+      recordChunks = [];
+      mediaRecorder.ondataavailable = (e) => { if (e.data.size) recordChunks.push(e.data); };
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(recordChunks, { type: recordChunks[0]?.type || 'audio/webm' });
+        const arr = await blob.arrayBuffer();
+        const buf = await audioCtx.decodeAudioData(arr.slice(0));
+        let trimmed = trimOrPadBuffer(buf, dur);
+        if (state.overdub && tracks[state.selectedTrack].buffer) {
+          trimmed = mixTwoBuffers(tracks[state.selectedTrack].buffer, trimmed, dur);
+        }
+        tracks[state.selectedTrack].buffer = trimmed;
+        renderTracks();
+        statusText.textContent = 'Recorded';
+      queueAutosave();
+      };
+
+      const startDelay = 0.08;
+      let recordStartAt = audioCtx.currentTime + startDelay;
+      if (state.countIn) {
+        const countDur = 4 * (60 / state.bpm);
+        scheduleClick(recordStartAt, true);
+        recordStartAt += countDur;
+      }
+
+      if (isPlaying) {
+        stopTransport();
+        await ensureAudio();
+      }
+
+      mediaRecorder.start();
+      isRecording = true;
+      statusText.textContent = 'Recording';
+      positionText.textContent = '0.00';
+
+      if (state.metro) scheduleClick(recordStartAt, false);
+      if (state.loop) {
+        loopStartTime = recordStartAt;
+        updatePositionLoop();
+      }
+
+      if (state.overdub && tracks.some(t => t.buffer)) {
+        isPlaying = true;
+        loopStartTime = recordStartAt;
+        nextLoopAt = recordStartAt;
+        stopAllSources();
+        scheduledClickTimes.clear();
+        scheduleLoop(nextLoopAt);
+      }
+
+      setTimeout(() => {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+        isRecording = false;
+        if (!state.overdub) {
+          clearInterval(transportTimer);
+          positionText.textContent = '0.00';
+        }
+        stopAllSources();
+        isPlaying = false;
+      }, Math.max(100, (recordStartAt - audioCtx.currentTime + dur) * 1000));
+    }
+
+    function trimOrPadBuffer(buffer, targetDur) {
+      const channels = Math.min(2, buffer.numberOfChannels);
+      const len = Math.floor(targetDur * buffer.sampleRate);
+      const out = audioCtx.createBuffer(channels, len, buffer.sampleRate);
+      for (let ch = 0; ch < channels; ch++) {
+        const source = buffer.getChannelData(ch);
+        const target = out.getChannelData(ch);
+        target.set(source.subarray(0, Math.min(source.length, len)));
+      }
+      return out;
+    }
+
+    function mixTwoBuffers(a, b, targetDur) {
+      const sr = audioCtx.sampleRate;
+      const len = Math.floor(targetDur * sr);
+      const channels = Math.max(a.numberOfChannels, b.numberOfChannels, 1);
+      const out = audioCtx.createBuffer(Math.min(2, channels), len, sr);
+      for (let ch = 0; ch < out.numberOfChannels; ch++) {
+        const data = out.getChannelData(ch);
+        const aData = a.getChannelData(Math.min(ch, a.numberOfChannels - 1));
+        const bData = b.getChannelData(Math.min(ch, b.numberOfChannels - 1));
+        for (let i = 0; i < len; i++) {
+          const sum = (aData[i] || 0) + (bData[i] || 0);
+          data[i] = Math.max(-1, Math.min(1, sum));
+        }
+      }
+      return out;
+    }
+
+    async function importAudioToTrack(file, index) {
+      await ensureAudio();
+      const arr = await file.arrayBuffer();
+      const buf = await audioCtx.decodeAudioData(arr.slice(0));
+      tracks[index].buffer = trimOrPadBuffer(buf, loopDuration());
+      renderTracks();
+      statusText.textContent = `Track ${index + 1} imported`;
+      queueAutosave();
+    }
+
+    async function renderMixdownBuffer() {
+      await ensureAudio();
+      const dur = loopDuration();
+      const len = Math.floor(audioCtx.sampleRate * dur);
+      const offline = new OfflineAudioContext(2, len, audioCtx.sampleRate);
+      const soloOn = hasSolo();
+      tracks.forEach(track => {
+        if (!track.buffer || track.mute || (soloOn && !track.solo)) return;
+        const src = offline.createBufferSource();
+        src.buffer = track.buffer;
+        const gain = offline.createGain();
+        gain.gain.value = track.gain * state.masterVolume;
+        const panner = offline.createStereoPanner();
+        panner.pan.value = track.pan;
+        src.connect(gain).connect(panner).connect(offline.destination);
+        src.start(0);
+      });
+      return await offline.startRendering();
+    }
+
+    function audioBufferToWav(buffer) {
+      const numChannels = buffer.numberOfChannels;
+      const sampleRate = buffer.sampleRate;
+      const format = 1;
+      const bitDepth = 16;
+      const samples = buffer.length;
+      const blockAlign = numChannels * bitDepth / 8;
+      const byteRate = sampleRate * blockAlign;
+      const dataSize = samples * blockAlign;
+      const ab = new ArrayBuffer(44 + dataSize);
+      const view = new DataView(ab);
+      let offset = 0;
+      const writeString = (s) => { for (let i = 0; i < s.length; i++) view.setUint8(offset++, s.charCodeAt(i)); };
+      writeString('RIFF'); view.setUint32(offset, 36 + dataSize, true); offset += 4;
+      writeString('WAVE'); writeString('fmt '); view.setUint32(offset, 16, true); offset += 4;
+      view.setUint16(offset, format, true); offset += 2;
+      view.setUint16(offset, numChannels, true); offset += 2;
+      view.setUint32(offset, sampleRate, true); offset += 4;
+      view.setUint32(offset, byteRate, true); offset += 4;
+      view.setUint16(offset, blockAlign, true); offset += 2;
+      view.setUint16(offset, bitDepth, true); offset += 2;
+      writeString('data'); view.setUint32(offset, dataSize, true); offset += 4;
+      const chData = Array.from({ length: numChannels }, (_, i) => buffer.getChannelData(i));
+      for (let i = 0; i < samples; i++) {
+        for (let ch = 0; ch < numChannels; ch++) {
+          let s = Math.max(-1, Math.min(1, chData[ch][i] || 0));
+          view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+          offset += 2;
+        }
+      }
+      return new Blob([ab], { type: 'audio/wav' });
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    async function bufferToBase64Wav(buffer) {
+      const blob = audioBufferToWav(buffer);
+      const arr = await blob.arrayBuffer();
+      let binary = '';
+      const bytes = new Uint8Array(arr);
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      return btoa(binary);
+    }
+
+    async function saveProject() {
+      const data = await buildProjectData(true);
+      const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+      downloadBlob(blob, `layerrec-project-${Date.now()}.json`);
+      statusText.textContent = 'Project exported';
+    }
+
+    async function saveProjectToIndexedDB() {
+      const suggested = projectNameInput.value.trim() || `project-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}`;
+      const payload = await buildProjectData(true);
+      const record = await putProjectRecord(suggested, payload);
+      projectNameInput.value = record.name;
+      await refreshProjectList(record.id);
+      setStatus(`IndexedDB saved: ${record.name}`);
+    }
+
+
+    async function loadProject(file) {
+      await ensureAudio();
+      const text = await file.text();
+      const data = JSON.parse(text);
+      state.bpm = Number(data.bpm || 120);
+      state.bars = Number(data.bars || 4);
+      bpmInput.value = state.bpm;
+      barsInput.value = String(state.bars);
+      for (let i = 0; i < TRACK_COUNT; i++) {
+        const src = data.tracks?.[i];
+        if (!src) continue;
+        tracks[i].name = src.name || `Track ${i + 1}`;
+        tracks[i].mute = !!src.mute;
+        tracks[i].solo = !!src.solo;
+        tracks[i].gain = Number(src.gain ?? 1);
+        tracks[i].pan = Number(src.pan ?? 0);
+        if (src.wavBase64) {
+          const bytes = Uint8Array.from(atob(src.wavBase64), c => c.charCodeAt(0));
+          const buf = await audioCtx.decodeAudioData(bytes.buffer.slice(0));
+          tracks[i].buffer = trimOrPadBuffer(buf, loopDuration());
+        } else {
+          tracks[i].buffer = null;
+        }
+      }
+      renderTracks();
+      statusText.textContent = 'Project loaded';
+    }
+
+
+    function setEditRatiosFromCanvas(canvas, startX, endX) {
+      const rect = canvas.getBoundingClientRect();
+      const x1 = Math.max(0, Math.min(rect.width, startX - rect.left));
+      const x2 = Math.max(0, Math.min(rect.width, endX - rect.left));
+      const a = Math.min(x1, x2) / rect.width;
+      const b = Math.max(x1, x2) / rect.width;
+      editStart.value = String(Math.round(a * 1000));
+      editEnd.value = String(Math.round(b * 1000));
+      refreshEditPanel();
+      renderTracks();
+    }
+
+    function bindWaveformPointerEvents() {
+      tracksWrap.addEventListener('pointerdown', (e) => {
+        const canvas = e.target.closest && e.target.closest('canvas.wave');
+        if (!canvas) return;
+        const index = Number(canvas.dataset.index || -1);
+        if (index < 0) return;
+        state.selectedTrack = index;
+        waveformDrag = { canvas, startX: e.clientX };
+        canvas.classList.add('canvas-touching');
+        if (canvas.setPointerCapture) canvas.setPointerCapture(e.pointerId);
+        setEditRatiosFromCanvas(canvas, e.clientX, e.clientX);
+        renderTracks();
+      });
+      tracksWrap.addEventListener('pointermove', (e) => {
+        if (!waveformDrag) return;
+        setEditRatiosFromCanvas(waveformDrag.canvas, waveformDrag.startX, e.clientX);
+      });
+      const endDrag = (e) => {
+        if (!waveformDrag) return;
+        waveformDrag.canvas.classList.remove('canvas-touching');
+        if (typeof e?.clientX === 'number') setEditRatiosFromCanvas(waveformDrag.canvas, waveformDrag.startX, e.clientX);
+        waveformDrag = null;
+      };
+      tracksWrap.addEventListener('pointerup', endDrag);
+      tracksWrap.addEventListener('pointercancel', endDrag);
+      tracksWrap.addEventListener('lostpointercapture', endDrag);
+    }
+
+    function bindEvents() {
+      $('initMicBtn').onclick = async () => {
+        try { await initMic(); } catch (e) { alert('マイクを有効化できませんでした: ' + e.message); }
+      };
+      bpmInput.onchange = () => { state.bpm = Math.max(40, Math.min(240, Number(bpmInput.value || 120))); updateTransportInfo(); renderTracks(); };
+      barsInput.onchange = () => { state.bars = Number(barsInput.value); updateTransportInfo(); renderTracks(); };
+      trackSelect.onchange = () => { state.selectedTrack = Number(trackSelect.value); renderTracks(); };
+      masterVol.oninput = () => { state.masterVolume = Number(masterVol.value); if (masterGain) masterGain.gain.value = state.masterVolume; };
+      clickVol.oninput = () => { state.clickVolume = Number(clickVol.value); queueAutosave(); };
+      autosaveBtn.onclick = async () => {
+        state.autoSave = !state.autoSave;
+        autosaveBtn.classList.toggle('active', state.autoSave);
+        autosaveBtn.textContent = state.autoSave ? 'Auto Save ON' : 'Auto Save OFF';
+        if (state.autoSave) { try { await saveAutosave(); } catch (e) { console.warn('autosave toggle save failed', e); } }
+      };
+      restoreAutosaveBtn.onclick = async () => {
+        try { await restoreAutosave(); } catch (e) { alert('自動保存の復元に失敗しました: ' + e.message); }
+      };
+
+      latencyMsInput.onchange = () => {
+        state.latencyMs = Math.max(0, Math.min(500, Number(latencyMsInput.value || 0)));
+        latencyMsInput.value = String(state.latencyMs);
+        updateTransportInfo();
+        queueAutosave();
+      };
+
+      const toggleBtn = (key, id) => {
+        $(id).onclick = () => {
+          state[key] = !state[key];
+          $(id).classList.toggle('active', state[key]);
+        };
+      };
+      toggleBtn('metro', 'metroBtn');
+      toggleBtn('countIn', 'countBtn');
+      toggleBtn('loop', 'loopBtn');
+      toggleBtn('overdub', 'overdubBtn');
+
+      $('playBtn').onclick = async () => { await ensureAudio(); startPlayback(); };
+      $('stopBtn').onclick = () => stopTransport();
+      $('recBtn').onclick = async () => {
+        try { await recordSelectedTrack(); } catch (e) { alert('録音に失敗しました: ' + e.message); }
+      };
+      $('clearTrackBtn').onclick = () => { tracks[state.selectedTrack].buffer = null; renderTracks(); };
+      $('clearAllBtn').onclick = () => { tracks.forEach(t => t.buffer = null); renderTracks(); };
+
+      $('exportWavBtn').onclick = async () => {
+        const mix = await renderMixdownBuffer();
+        downloadBlob(audioBufferToWav(mix), `layerrec-mix-${Date.now()}.wav`);
+        statusText.textContent = 'WAV exported';
+      };
+      $('saveProjectBtn').onclick = async () => {
+        try { await saveProject(); } catch (e) { alert('保存に失敗しました: ' + e.message); }
+      };
+      $('loadProjectInput').onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try { await loadProject(file); } catch (err) { alert('Project読み込み失敗: ' + err.message); }
+        e.target.value = '';
+      };
+      $('saveIdbBtn').onclick = async () => {
+        try { await saveProjectToIndexedDB(); } catch (e) { alert('IndexedDB保存に失敗しました: ' + e.message); }
+      };
+      $('loadIdbBtn').onclick = async () => {
+        const id = projectsSelect.value;
+        if (!id) return;
+        try {
+          const row = await getProjectRecord(id);
+          if (!row?.payload) throw new Error('保存データがありません');
+          projectNameInput.value = row.name || id;
+          await applyProjectData(row.payload);
+          setStatus(`IndexedDB loaded: ${row.name || id}`);
+        } catch (e) {
+          alert('IndexedDB読込に失敗しました: ' + e.message);
+        }
+      };
+      $('deleteIdbBtn').onclick = async () => {
+        const id = projectsSelect.value;
+        if (!id) return;
+        try {
+          await deleteProjectRecord(id);
+          await refreshProjectList();
+          setStatus(`Deleted: ${id}`);
+        } catch (e) {
+          alert('削除に失敗しました: ' + e.message);
+        }
+      };
+
+      tracksWrap.addEventListener('click', (e) => {
+        const target = e.target;
+        if (!(target instanceof HTMLElement)) return;
+        if (target.dataset.select) {
+          state.selectedTrack = Number(target.dataset.select);
+          renderTracks();
+        }
+        if (target.dataset.mute) {
+          const i = Number(target.dataset.mute);
+          tracks[i].mute = !tracks[i].mute;
+          renderTracks();
+        }
+        if (target.dataset.solo) {
+          const i = Number(target.dataset.solo);
+          tracks[i].solo = !tracks[i].solo;
+          renderTracks();
+        }
+      });
+
+      tracksWrap.addEventListener('input', async (e) => {
+        const target = e.target;
+        if (!(target instanceof HTMLElement)) return;
+        if (target.dataset.gain) {
+          tracks[Number(target.dataset.gain)].gain = Number(target.value);
+        }
+        if (target.dataset.pan) {
+          tracks[Number(target.dataset.pan)].pan = Number(target.value);
+        }
+      });
+
+      tracksWrap.addEventListener('change', async (e) => {
+        const target = e.target;
+        if (!(target instanceof HTMLInputElement)) return;
+        if (target.dataset.import) {
+          const file = target.files[0];
+          if (file) {
+            try { await importAudioToTrack(file, Number(target.dataset.import)); }
+            catch (err) { alert('音源読込に失敗しました: ' + err.message); }
+          }
+          target.value = '';
+        }
+      });
+    }
+
+    async function bootstrap() {
+      setupTracks();
+      bindEvents();
+      updateTransportInfo();
+      try {
+        await initProjectDB();
+      } catch (e) {
+        storageMode = 'localStorage';
+        if (storageInfo) storageInfo.textContent = 'IndexedDB初期化失敗 / localStorage使用';
+        console.warn('IndexedDB init failed', e);
+      }
+      try {
+        await refreshProjectList();
+      } catch (e) {
+        console.warn('project list refresh failed', e);
+      }
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>
