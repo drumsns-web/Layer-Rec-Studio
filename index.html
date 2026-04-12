@@ -2,141 +2,118 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LayerRec Lite</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>LayerRec Studio</title>
   <style>
     :root {
-      --bg: #111318;
-      --panel: #1b1f27;
-      --panel2: #232937;
-      --text: #f4f7fb;
-      --muted: #9ca8bd;
-      --line: #333b4d;
-      --accent: #54d2ff;
-      --danger: #ff5c7a;
-      --good: #76e39f;
-      --warn: #ffd166;
+      --bg: #10131a;
+      --panel: #171c25;
+      --panel2: #202736;
+      --line: #313a4f;
+      --text: #f5f7fb;
+      --muted: #99a7c2;
+      --accent: #55d0ff;
+      --good: #6be39a;
+      --danger: #ff5e7a;
+      --warn: #ffd36f;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: linear-gradient(180deg, #101217, #151a23 55%, #0f1217);
+      background: linear-gradient(180deg, #0d1016, #121824 45%, #0c0f15);
       color: var(--text);
     }
-    .app {
-      max-width: 1180px;
-      margin: 0 auto;
-      padding: 18px;
-    }
-    h1 { margin: 0 0 14px; font-size: 28px; letter-spacing: 0.06em; }
-    .sub { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
+    .app { max-width: 1320px; margin: 0 auto; padding: 16px; padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+    h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: .05em; }
+    .sub { color: var(--muted); font-size: 13px; line-height: 1.5; }
     .card {
-      background: rgba(27,31,39,.95);
+      background: rgba(23,28,37,.96);
       border: 1px solid var(--line);
       border-radius: 16px;
       padding: 14px;
-      margin-bottom: 14px;
-      box-shadow: 0 10px 28px rgba(0,0,0,.18);
+      margin: 0 0 14px;
+      box-shadow: 0 10px 28px rgba(0,0,0,.2);
     }
-    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-    .grow { flex: 1; }
+    .sticky { position: sticky; top: 0; z-index: 30; backdrop-filter: blur(8px); }
+    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .grid { display: grid; grid-template-columns: repeat(6, minmax(120px, 1fr)); gap: 10px; }
     .label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
-    input[type="number"], select, input[type="file"] {
-      background: var(--panel2);
-      color: var(--text);
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 10px 12px;
-      min-height: 42px;
+    input[type="number"], input[type="text"], select, input[type="file"] {
+      width: 100%; min-height: 42px; padding: 10px 12px;
+      background: var(--panel2); color: var(--text);
+      border: 1px solid var(--line); border-radius: 10px;
     }
+    input[type="range"] { width: 100%; }
     button {
-      background: var(--panel2);
-      color: var(--text);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      min-height: 42px;
-      padding: 10px 14px;
-      cursor: pointer;
-      font-weight: 600;
+      min-height: 42px; padding: 10px 14px; border-radius: 12px;
+      border: 1px solid var(--line); background: var(--panel2); color: var(--text);
+      font-weight: 700; cursor: pointer;
     }
-    button:hover { filter: brightness(1.07); }
-    button.primary { border-color: #2f6fff; background: #1c3f8f; }
-    button.danger { border-color: #8f3048; background: #602234; }
-    button.good { border-color: #2f7e4d; background: #205535; }
+    button:hover { filter: brightness(1.06); }
+    button.primary { background: #1d418f; border-color: #2b63ff; }
+    button.good { background: #1e5636; border-color: #2b8a53; }
+    button.danger { background: #5b2434; border-color: #934055; }
     button.active { outline: 2px solid var(--accent); }
     button:disabled { opacity: .55; cursor: not-allowed; }
-    .pill { padding: 6px 10px; border-radius: 999px; background: #18202c; border: 1px solid var(--line); font-size: 12px; }
-    .status { font-weight: 700; }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(5, minmax(140px, 1fr));
-      gap: 10px;
+    .pill {
+      padding: 7px 10px; border-radius: 999px; background: #131923;
+      border: 1px solid var(--line); font-size: 12px;
     }
-    .tracks { display: grid; gap: 8px; }
+    .transport {
+      display: flex; gap: 12px; justify-content: space-between; align-items: flex-start; flex-wrap: wrap;
+    }
+    .tracks { display: grid; gap: 10px; }
     .track {
-      display: grid;
-      grid-template-columns: 56px 1.6fr 110px 110px 110px 110px 130px;
-      gap: 8px;
-      align-items: center;
-      background: #171c25;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 10px;
+      border: 1px solid var(--line); border-radius: 14px; background: #141a23; padding: 10px;
+      display: grid; gap: 10px;
     }
     .track.selected { outline: 2px solid var(--accent); }
-    .track-name { font-weight: 700; }
-    .mini { font-size: 12px; color: var(--muted); }
-    .timeline {
-      height: 18px;
-      background: #0f1319;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      overflow: hidden;
-      position: relative;
+    .track-top { display: grid; grid-template-columns: 64px 1fr 240px; gap: 10px; align-items: center; }
+    .track-body { display: grid; grid-template-columns: repeat(6, minmax(90px, 1fr)); gap: 10px; }
+    .track-fx { display: grid; grid-template-columns: repeat(5, minmax(90px, 1fr)); gap: 10px; }
+    .select-btn { min-width: 54px; }
+    .meta { color: var(--muted); font-size: 12px; }
+    .wave-wrap {
+      position: relative; width: 100%; height: 78px; border-radius: 10px; overflow: hidden;
+      border: 1px solid var(--line); background: #0d1219;
     }
-    .timeline .fill {
-      height: 100%;
-      background: linear-gradient(90deg, #4bbfff, #7bf2b5);
-      width: 0%;
+    canvas.wave { width: 100%; height: 78px; display: block; touch-action: none; }
+    .playhead, .sel {
+      position: absolute; top: 0; bottom: 0; pointer-events: none;
     }
-    .head-line {
-      display: grid;
-      grid-template-columns: 56px 1.6fr 110px 110px 110px 110px 130px;
-      gap: 8px;
-      padding: 0 10px 8px;
-      color: var(--muted);
-      font-size: 12px;
-    }
+    .playhead { width: 2px; background: #7bf2b5; left: 0; opacity: .85; }
+    .sel { background: rgba(85,208,255,.18); border-left: 1px solid rgba(85,208,255,.6); border-right: 1px solid rgba(85,208,255,.6); }
     .footer { color: var(--muted); font-size: 12px; line-height: 1.6; }
-    a { color: #8edcff; }
-    @media (max-width: 920px) {
-      .grid { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
-      .track, .head-line { grid-template-columns: 46px 1fr 86px 86px 86px 86px; }
-      .import-cell { grid-column: 2 / -1; }
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: repeat(3, minmax(120px, 1fr)); }
+      .track-top { grid-template-columns: 54px 1fr; }
+      .track-top > :last-child { grid-column: 1 / -1; }
+      .track-body, .track-fx { grid-template-columns: repeat(3, minmax(90px, 1fr)); }
     }
     @media (max-width: 640px) {
-      .track, .head-line { grid-template-columns: 40px 1fr 78px 78px 78px; }
-      .hide-sm { display: none; }
-      .grid { grid-template-columns: 1fr 1fr; }
+      .app { padding: 12px; }
+      button { min-height: 46px; }
+      .grid, .track-body, .track-fx { grid-template-columns: repeat(2, minmax(100px, 1fr)); }
     }
   </style>
 </head>
 <body>
   <div class="app">
-    <h1>LAYERREC LITE</h1>
-    <div class="sub">ブラウザで重ね録りする軽量版です。録音・再生・ループ・メトロノーム・JSON保存・WAV書き出しに対応しています。</div>
+    <h1>LAYERREC STUDIO</h1>
+    <div class="sub">多重録音の試作版です。マイクON/OFF、1/2/4/8/16小節または無制限録音、各トラック音量、リバーブ、ディレイ、WAV書き出し、IndexedDB保存に対応しています。</div>
 
-    <div class="card sticky-transport">
-      <div class="row" style="justify-content: space-between; align-items: flex-start;">
+    <div class="card sticky">
+      <div class="transport">
         <div>
-          <div class="pill status" id="statusText">Ready</div>
-          <div class="sub" id="transportInfo">0 tracks · 120 BPM · 4 bars</div>
+          <div class="pill" id="statusText">Ready</div>
+          <div class="sub" id="transportInfo">0 tracks · 120 BPM · rec 4 bars</div>
         </div>
         <div class="row">
           <div class="pill">Position <span id="positionText">0.00</span>s</div>
-          <div class="pill">Loop <span id="loopText">8.00</span>s</div>
-          <div class="pill">Input <span id="micText">MIC OFF</span></div>
+          <div class="pill">Rec <span id="recLengthText">8.00</span>s</div>
+          <div class="pill">Mic <span id="micText">OFF</span></div>
+          <div class="pill">Voices <span id="voicesText">0</span></div>
         </div>
       </div>
     </div>
@@ -147,48 +124,42 @@
         <input id="bpmInput" type="number" min="40" max="240" step="1" value="120" />
       </div>
       <div>
-        <div class="label">Bars</div>
-        <select id="barsInput">
-          <option>1</option>
-          <option>2</option>
-          <option selected>4</option>
-          <option>8</option>
-          <option>16</option>
+        <div class="label">録音小節数</div>
+        <select id="recordBarsInput">
+          <option value="1">1小節</option>
+          <option value="2">2小節</option>
+          <option value="4" selected>4小節</option>
+          <option value="8">8小節</option>
+          <option value="16">16小節</option>
+          <option value="inf">無制限(最大10分)</option>
         </select>
       </div>
       <div>
-        <div class="label">Selected Track</div>
+        <div class="label">選択トラック</div>
         <select id="trackSelect"></select>
       </div>
       <div>
-        <div class="label">Master Volume</div>
+        <div class="label">Master</div>
         <input id="masterVol" type="range" min="0" max="1.2" step="0.01" value="1" />
       </div>
       <div>
-        <div class="label">Click Volume</div>
-        <input id="clickVol" type="range" min="0" max="1" step="0.01" value="0.35" />
+        <div class="label">Click</div>
+        <input id="clickVol" type="range" min="0" max="1" step="0.01" value="0.25" />
       </div>
       <div>
-        <div class="label">Rec Delay補正(ms)</div>
+        <div class="label">録音遅延補正(ms)</div>
         <input id="latencyMsInput" type="number" min="0" max="500" step="5" value="120" />
-      </div>
-      <div>
-        <div class="label">Auto Save</div>
-        <button id="autosaveBtn" class="active">Auto Save ON</button>
-      </div>
-      <div>
-        <div class="label">復元</div>
-        <button id="restoreAutosaveBtn">Auto Save復元</button>
       </div>
     </div>
 
     <div class="card">
       <div class="row">
-        <button id="initMicBtn">MIC ON</button>
+        <button id="micToggleBtn">MIC ON</button>
+        <button id="monitorBtn">Monitor</button>
         <button id="metroBtn">♩ Metro</button>
-        <button id="countBtn">1234 Count</button>
-        <button id="loopBtn" class="active">↺ Loop</button>
+        <button id="countBtn" class="active">4 Count In</button>
         <button id="overdubBtn">⊕ Overdub</button>
+        <button id="loopBtn">↻ Loop</button>
         <button id="playBtn" class="primary">▶ Play</button>
         <button id="recBtn" class="danger">● Rec</button>
         <button id="stopBtn">■ Stop</button>
@@ -199,710 +170,770 @@
 
     <div class="card">
       <div class="row" style="justify-content: space-between;">
-        <strong>Tracks</strong>
-        <div class="mini">録音は選択中トラックに入ります。音源読込でも各トラックへ配置できます。</div>
+        <strong>クリップ編集</strong>
+        <div class="meta">タイムラインをクリックでクリップ選択、ダブルクリックまたは分割ボタンでカーソル位置分割します。</div>
       </div>
-      <div class="head-line">
-        <div>#</div>
-        <div>Clip</div>
-        <div>Mute</div>
-        <div>Solo</div>
-        <div class="hide-sm">Gain</div>
-        <div class="hide-sm">Pan</div>
-        <div class="import-cell">Import</div>
+      <div class="row" style="margin-top:10px;">
+        <button id="trimKeepBtn">選択クリップだけ残す</button>
+        <button id="trimDeleteBtn">選択クリップを削除</button>
+        <button id="splitBtn">カーソル位置で分割</button>
+        <button id="duplicateBtn">選択クリップを複製</button>
+        <button id="resetSelectionBtn">選択解除</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content: space-between;">
+        <strong>Tracks</strong>
+        <div class="meta">各トラックに音量、パン、リバーブ、ディレイを設定できます。波形ドラッグで選択範囲を指定できます。</div>
       </div>
       <div id="tracks" class="tracks"></div>
     </div>
 
     <div class="card">
-      <div class="row">
-        <button id="exportWavBtn" class="good">↓ WAV Export</button>
-        <button id="saveProjectBtn">↗ Project書き出し</button>
-        <label class="button-like">
-          <input id="loadProjectInput" type="file" accept="application/json" />
-        </label>
-        <span class="mini">Project読み込みはJSONファイルを選択してください。</span>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="row" style="align-items:end; flex-wrap:wrap; gap:12px;">
+      <div class="row" style="align-items:end;">
         <div style="min-width:220px; flex:1;">
-          <div class="label">IndexedDB 保存名</div>
+          <div class="label">保存名</div>
           <input id="projectNameInput" type="text" placeholder="例: chorus-take-01" />
         </div>
         <div class="row">
-          <button id="saveIdbBtn" class="good">💾 IndexedDB保存</button>
-          <button id="loadIdbBtn">↺ IndexedDB読込</button>
+          <button id="saveIdbBtn" class="good">💾 保存</button>
+          <button id="loadIdbBtn">↺ 読込</button>
           <button id="deleteIdbBtn" class="danger">✕ 削除</button>
+          <button id="exportWavBtn" class="good">↓ WAV</button>
+          <button id="saveProjectBtn">↗ JSON</button>
+          <label>
+            <input id="loadProjectInput" type="file" accept="application/json" />
+          </label>
         </div>
       </div>
-      <div class="row" style="margin-top:10px; align-items:end; flex-wrap:wrap; gap:12px;">
+      <div class="row" style="margin-top:10px; align-items:end;">
         <div style="min-width:240px; flex:1;">
           <div class="label">保存済みプロジェクト</div>
           <select id="projectsSelect"></select>
         </div>
-        <div class="mini" id="storageInfo">IndexedDB: 初期化前</div>
+        <div class="meta" id="storageInfo">IndexedDB: 初期化前</div>
       </div>
     </div>
 
     <div class="card footer">
-      <div>実装メモ:</div>
-      <div>・自動保存は IndexedDB 優先です。非対応環境のみ localStorage にフォールバックします。</div>
-      <div>・録音は MediaRecorder / Web Audio 併用です。Safari / iPhone ではブラウザ制約により挙動差が出る可能性があります。</div>
-      <div>・MP3 は未対応です。まずは WAV と Project 保存を優先しています。</div>
-      <div>・Overdub は同一トラックの既存音声と新録音を合成します。</div>
+      <div>・無制限録音はブラウザ負荷を抑えるため最大10分までです。</div>
+      <div>・同時発音数は「トラック数 × エフェクト数」に依存します。10トラック程度なら多くのPCで実用域ですが、iPhoneは負荷が上がる可能性があります。</div>
+      <div>・リバーブは軽量インパルス、ディレイはフィードバック付きディレイです。</div>
     </div>
   </div>
 
+  
   <script>
     const TRACK_COUNT = 10;
-    const tracks = [];
-    const trackEls = [];
+    const DB_NAME = 'layerrecStudioDB';
+    const DB_VERSION = 2;
+    const STORE_PROJECTS = 'projects';
+    const MAX_REC_SECONDS = 600;
+
+    const state = {
+      bpm: 120,
+      selectedTrack: 0,
+      recordBars: '4',
+      metro: false,
+      countIn: true,
+      overdub: false,
+      loop: false,
+      monitor: false,
+      masterVolume: 1,
+      clickVolume: 0.25,
+      latencyMs: 120,
+      timelineCursorTime: 0,
+    };
+
     let audioCtx = null;
     let masterGain = null;
+    let clickGain = null;
     let mediaStream = null;
+    let monitorGainNode = null;
     let mediaRecorder = null;
     let recordChunks = [];
     let isPlaying = false;
     let isRecording = false;
-    let transportTimer = null;
-    let loopScheduler = null;
-    let loopStartTime = 0;
-    let nextLoopAt = 0;
-    let scheduledClickTimes = new Set();
-    let activeSources = [];
+    let playStartedAt = 0;
+    let playTimer = null;
+    let playSources = [];
+    let projectDB = null;
+    let activeVoiceCount = 0;
+    let recordStopTimer = null;
+    let nextClipId = 1;
+    let playbackCycleDuration = 0;
 
-    const state = {
-      bpm: 120,
-      bars: 4,
-      selectedTrack: 0,
-      metro: false,
-      countIn: false,
-      loop: true,
-      overdub: false,
-      masterVolume: 1,
-      clickVolume: 0.35,
-      latencyMs: 120,
-      autoSave: true,
-    };
+    const tracks = [];
+    const trackEls = [];
 
     const $ = (id) => document.getElementById(id);
     const bpmInput = $('bpmInput');
-    const barsInput = $('barsInput');
+    const recordBarsInput = $('recordBarsInput');
     const trackSelect = $('trackSelect');
+    const masterVol = $('masterVol');
+    const clickVol = $('clickVol');
+    const latencyMsInput = $('latencyMsInput');
     const tracksWrap = $('tracks');
     const statusText = $('statusText');
     const transportInfo = $('transportInfo');
     const positionText = $('positionText');
-    const loopText = $('loopText');
+    const recLengthText = $('recLengthText');
     const micText = $('micText');
-    const masterVol = $('masterVol');
-    const clickVol = $('clickVol');
+    const voicesText = $('voicesText');
     const projectNameInput = $('projectNameInput');
     const projectsSelect = $('projectsSelect');
     const storageInfo = $('storageInfo');
-    const latencyMsInput = $('latencyMsInput');
-    const autosaveBtn = $('autosaveBtn');
-    const restoreAutosaveBtn = $('restoreAutosaveBtn');
 
-    function loopDuration() {
-      return state.bars * 4 * 60 / state.bpm;
-    }
-
-    const DB_NAME = 'layerrecLiteDB';
-    const DB_VERSION = 1;
-    const STORE_PROJECTS = 'projects';
-    const STORE_META = 'meta';
-    let projectDB = null;
-    let storageMode = 'localStorage';
-
-
-    function isIOSFamily() {
-      const ua = navigator.userAgent || '';
-      return /iPhone|iPad|iPod/i.test(ua);
-    }
-
-    function setStatus(text) {
-      statusText.textContent = text;
-    }
-
-    function queueAutosave() {
-      if (!state.autoSave) return;
-      clearTimeout(autosaveTimer);
-      autosaveTimer = setTimeout(() => {
-        saveAutosave().catch(err => console.warn('autosave failed', err));
-      }, 700);
-    }
-
-    function idbRequest(req) {
-      return new Promise((resolve, reject) => {
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error || new Error('IndexedDB request failed'));
-      });
-    }
-
-    function idbTxDone(tx) {
-      return new Promise((resolve, reject) => {
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error || new Error('IndexedDB transaction failed'));
-        tx.onabort = () => reject(tx.error || new Error('IndexedDB transaction aborted'));
-      });
-    }
-
-    async function initProjectDB() {
-      if (!('indexedDB' in window)) {
-        storageMode = 'localStorage';
-        if (storageInfo) storageInfo.textContent = 'IndexedDB: 非対応 / localStorage使用';
-        return null;
-      }
-      if (projectDB) return projectDB;
-      const req = indexedDB.open(DB_NAME, DB_VERSION);
-      req.onupgradeneeded = () => {
-        const db = req.result;
-        if (!db.objectStoreNames.contains(STORE_PROJECTS)) {
-          const store = db.createObjectStore(STORE_PROJECTS, { keyPath: 'id' });
-          store.createIndex('updatedAt', 'updatedAt', { unique: false });
-        }
-        if (!db.objectStoreNames.contains(STORE_META)) {
-          db.createObjectStore(STORE_META, { keyPath: 'key' });
-        }
-      };
-      projectDB = await new Promise((resolve, reject) => {
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error || new Error('IndexedDB open failed'));
-      });
-      storageMode = 'indexedDB';
-      if (storageInfo) storageInfo.textContent = 'IndexedDB: 利用中';
-      return projectDB;
-    }
-
-    async function setMetaRecord(key, value) {
-      const db = await initProjectDB();
-      if (!db) {
-        localStorage.setItem(`${AUTOSAVE_KEY}:${key}`, JSON.stringify(value));
-        return;
-      }
-      const tx = db.transaction(STORE_META, 'readwrite');
-      tx.objectStore(STORE_META).put({ key, value, updatedAt: new Date().toISOString() });
-      await idbTxDone(tx);
-    }
-
-    async function getMetaRecord(key) {
-      const db = await initProjectDB();
-      if (!db) {
-        const raw = localStorage.getItem(`${AUTOSAVE_KEY}:${key}`);
-        return raw ? JSON.parse(raw) : null;
-      }
-      const tx = db.transaction(STORE_META, 'readonly');
-      const row = await idbRequest(tx.objectStore(STORE_META).get(key));
-      await idbTxDone(tx);
-      return row?.value ?? null;
-    }
-
-    async function putProjectRecord(name, payload) {
-      const db = await initProjectDB();
-      const id = slugifyName(name || `project-${Date.now()}`);
-      const record = {
-        id,
-        name: name || id,
-        updatedAt: new Date().toISOString(),
-        payload,
-      };
-      if (!db) {
-        localStorage.setItem(`${AUTOSAVE_KEY}:project:${id}`, JSON.stringify(record));
-        return record;
-      }
-      const tx = db.transaction(STORE_PROJECTS, 'readwrite');
-      tx.objectStore(STORE_PROJECTS).put(record);
-      await idbTxDone(tx);
-      return record;
-    }
-
-    async function listProjectRecords() {
-      const db = await initProjectDB();
-      if (!db) {
-        const out = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (!key || !key.startsWith(`${AUTOSAVE_KEY}:project:`)) continue;
-          try { out.push(JSON.parse(localStorage.getItem(key))); } catch {}
-        }
-        return out.sort((a, b) => (b?.updatedAt || '').localeCompare(a?.updatedAt || ''));
-      }
-      const tx = db.transaction(STORE_PROJECTS, 'readonly');
-      const rows = await idbRequest(tx.objectStore(STORE_PROJECTS).getAll());
-      await idbTxDone(tx);
-      return (rows || []).sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
-    }
-
-    async function getProjectRecord(id) {
-      const db = await initProjectDB();
-      if (!db) {
-        const raw = localStorage.getItem(`${AUTOSAVE_KEY}:project:${id}`);
-        return raw ? JSON.parse(raw) : null;
-      }
-      const tx = db.transaction(STORE_PROJECTS, 'readonly');
-      const row = await idbRequest(tx.objectStore(STORE_PROJECTS).get(id));
-      await idbTxDone(tx);
-      return row || null;
-    }
-
-    async function deleteProjectRecord(id) {
-      const db = await initProjectDB();
-      if (!db) {
-        localStorage.removeItem(`${AUTOSAVE_KEY}:project:${id}`);
-        return;
-      }
-      const tx = db.transaction(STORE_PROJECTS, 'readwrite');
-      tx.objectStore(STORE_PROJECTS).delete(id);
-      await idbTxDone(tx);
-    }
-
-    function slugifyName(name) {
-      return String(name || '')
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9぀-ヿ㐀-龿_-]+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        .slice(0, 60) || `project-${Date.now()}`;
-    }
-
-    async function refreshProjectList(selectedId = '') {
-      const rows = await listProjectRecords();
-      projectsSelect.innerHTML = '';
-      if (!rows.length) {
-        const opt = document.createElement('option');
-        opt.value = '';
-        opt.textContent = '保存済みプロジェクトなし';
-        projectsSelect.appendChild(opt);
-      } else {
-        for (const row of rows) {
-          const opt = document.createElement('option');
-          opt.value = row.id;
-          const dt = row.updatedAt ? new Date(row.updatedAt).toLocaleString() : '';
-          opt.textContent = `${row.name} (${dt})`;
-          projectsSelect.appendChild(opt);
-        }
-      }
-      if (selectedId) projectsSelect.value = selectedId;
-      if (storageInfo) storageInfo.textContent = `${storageMode === 'indexedDB' ? 'IndexedDB' : 'localStorage'}: ${rows.length}件保存`;
-    }
-
-    async function saveAutosave() {
-      const payload = await buildProjectData(true);
-      await setMetaRecord('autosave', payload);
-      setStatus('Auto saved');
-    }
-
-    async function restoreAutosave() {
-      const data = await getMetaRecord('autosave');
-      if (!data) throw new Error('自動保存データがありません');
-      await applyProjectData(data);
-      setStatus('Auto save restored');
-    }
-
-    async function buildProjectData(includeBuffers = true) {
-      const data = {
-        version: 3,
-        bpm: state.bpm,
-        bars: state.bars,
-        latencyMs: state.latencyMs,
-        autoSave: state.autoSave,
-        createdAt: new Date().toISOString(),
-        tracks: []
-      };
-      for (const track of tracks) {
-        data.tracks.push({
-          name: track.name,
-          mute: track.mute,
-          solo: track.solo,
-          gain: track.gain,
-          pan: track.pan,
-          wavBase64: includeBuffers && track.buffer ? await bufferToBase64Wav(track.buffer) : null,
-        });
-      }
-      return data;
-    }
-
-    async function applyProjectData(data) {
-      await ensureAudio();
-      state.bpm = Number(data.bpm || 120);
-      state.bars = Number(data.bars || 4);
-      state.latencyMs = Number(data.latencyMs ?? state.latencyMs ?? 120);
-      state.autoSave = data.autoSave !== false;
-      bpmInput.value = state.bpm;
-      barsInput.value = String(state.bars);
-      latencyMsInput.value = String(state.latencyMs);
-      $('autosaveBtn').classList.toggle('active', state.autoSave);
-      $('autosaveBtn').textContent = state.autoSave ? 'Auto Save ON' : 'Auto Save OFF';
-      for (let i = 0; i < TRACK_COUNT; i++) {
-        const src = data.tracks?.[i];
-        if (!src) {
-          tracks[i].buffer = null;
-          tracks[i].mute = false;
-          tracks[i].solo = false;
-          tracks[i].gain = 1;
-          tracks[i].pan = 0;
-          continue;
-        }
-        tracks[i].name = src.name || `Track ${i + 1}`;
-        tracks[i].mute = !!src.mute;
-        tracks[i].solo = !!src.solo;
-        tracks[i].gain = Number(src.gain ?? 1);
-        tracks[i].pan = Number(src.pan ?? 0);
-        if (src.wavBase64) {
-          const bytes = Uint8Array.from(atob(src.wavBase64), c => c.charCodeAt(0));
-          const buf = await audioCtx.decodeAudioData(bytes.buffer.slice(0));
-          tracks[i].buffer = trimOrPadBuffer(buf, loopDuration());
-        } else {
-          tracks[i].buffer = null;
-        }
-      }
-      renderTracks();
-      resetEditRange();
-    }
+    function setStatus(text) { statusText.textContent = text; }
+    function beatDuration() { return 60 / state.bpm; }
+    function barsToSeconds(bars) { return Number(bars) * 4 * beatDuration(); }
+    function recordDurationSeconds() { return state.recordBars === 'inf' ? MAX_REC_SECONDS : barsToSeconds(state.recordBars); }
+    function hasSolo() { return tracks.some(t => t.solo); }
+    function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 
     function updateTransportInfo() {
-      transportInfo.textContent = `${tracks.filter(t => t.buffer).length} tracks · ${state.bpm} BPM · ${state.bars} bars · Delay ${state.latencyMs}ms`;
-      loopText.textContent = loopDuration().toFixed(2);
+      const loaded = tracks.filter(t => t.clips.length).length;
+      const recLabel = state.recordBars === 'inf' ? '∞ (max 10min)' : `${state.recordBars} bars`;
+      transportInfo.textContent = `${loaded} tracks · ${state.bpm} BPM · rec ${recLabel}`;
+      recLengthText.textContent = state.recordBars === 'inf' ? '∞ / 600.00' : recordDurationSeconds().toFixed(2);
+      voicesText.textContent = String(activeVoiceCount);
     }
 
     async function ensureAudio() {
       if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
         masterGain = audioCtx.createGain();
+        clickGain = audioCtx.createGain();
         masterGain.gain.value = state.masterVolume;
+        clickGain.gain.value = state.clickVolume;
+        clickGain.connect(masterGain);
         masterGain.connect(audioCtx.destination);
       }
-      if (audioCtx.state === 'suspended') {
-        await audioCtx.resume();
+      if (audioCtx.state === 'suspended') await audioCtx.resume();
+    }
+
+    function generateImpulse(ctx, seconds = 1.6, decay = 2.2) {
+      const len = Math.floor(ctx.sampleRate * seconds);
+      const impulse = ctx.createBuffer(2, len, ctx.sampleRate);
+      for (let ch = 0; ch < 2; ch++) {
+        const data = impulse.getChannelData(ch);
+        for (let i = 0; i < len; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+        }
+      }
+      return impulse;
+    }
+
+    function createClip(buffer, startTime = 0) {
+      return { id: `clip-${nextClipId++}`, buffer, startTime };
+    }
+
+    function createTrack(id) {
+      return {
+        id,
+        name: `Track ${id + 1}`,
+        clips: [],
+        selectedClipId: null,
+        mute: false,
+        solo: false,
+        gain: 1,
+        pan: 0,
+        reverbMix: 0,
+        delayTime: 0.18,
+        delayFeedback: 0.2,
+        delayMix: 0,
+      };
+    }
+
+    function getTrackDuration(track) {
+      return track.clips.reduce((m, clip) => Math.max(m, clip.startTime + clip.buffer.duration), 0);
+    }
+
+    function sortTrackClips(track) {
+      track.clips.sort((a, b) => a.startTime - b.startTime);
+    }
+
+    function normalizeTrackClips(track) {
+      sortTrackClips(track);
+      let cursor = 0;
+      for (const clip of track.clips) {
+        clip.startTime = cursor;
+        cursor += clip.buffer.duration;
+      }
+      if (!track.clips.some(c => c.id === track.selectedClipId)) {
+        track.selectedClipId = track.clips[0]?.id || null;
       }
     }
 
-    async function initMic() {
-      await ensureAudio();
-      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      micText.textContent = 'MIC ON';
-      $('initMicBtn').classList.add('active');
-      statusText.textContent = 'Mic Ready';
+    function setTrackSingleBuffer(track, buffer) {
+      track.clips = buffer ? [createClip(buffer, 0)] : [];
+      track.selectedClipId = track.clips[0]?.id || null;
+    }
+
+    function getSelectedClip(track) {
+      return track.clips.find(c => c.id === track.selectedClipId) || null;
     }
 
     function setupTracks() {
       for (let i = 0; i < TRACK_COUNT; i++) {
-        const track = {
-          id: i,
-          name: `Track ${i + 1}`,
-          buffer: null,
-          mute: false,
-          solo: false,
-          gain: 1,
-          pan: 0,
-        };
+        const track = createTrack(i);
         tracks.push(track);
         const opt = document.createElement('option');
-        opt.value = i;
-        opt.textContent = `${i + 1}`;
+        opt.value = String(i);
+        opt.textContent = `Track ${i + 1}`;
         trackSelect.appendChild(opt);
 
         const el = document.createElement('div');
         el.className = 'track';
         el.innerHTML = `
-          <button data-select="${i}">${i + 1}</button>
-          <div>
-            <div class="track-name">Empty</div>
-            <div class="timeline"><div class="fill"></div></div>
-            <div class="mini meta">0.00s</div>
+          <div class="track-top">
+            <button class="select-btn" data-select="${i}">${i + 1}</button>
+            <div>
+              <div style="font-weight:700; margin-bottom:4px;">${track.name}</div>
+              <div class="meta meta-text">Empty</div>
+            </div>
+            <div class="row">
+              <button data-mute="${i}">Mute</button>
+              <button data-solo="${i}">Solo</button>
+              <input data-import="${i}" type="file" accept="audio/*" />
+            </div>
           </div>
-          <button data-mute="${i}">Mute</button>
-          <button data-solo="${i}">Solo</button>
-          <input class="hide-sm" data-gain="${i}" type="range" min="0" max="1.5" step="0.01" value="1" />
-          <input class="hide-sm" data-pan="${i}" type="range" min="-1" max="1" step="0.01" value="0" />
-          <input class="import-cell" data-import="${i}" type="file" accept="audio/*" />
+          <div class="wave-wrap">
+            <canvas class="wave" data-index="${i}" width="900" height="78"></canvas>
+            <div class="playhead"></div>
+          </div>
+          <div class="track-body">
+            <div><div class="label">Volume</div><input data-gain="${i}" type="range" min="0" max="1.5" step="0.01" value="1" /></div>
+            <div><div class="label">Pan</div><input data-pan="${i}" type="range" min="-1" max="1" step="0.01" value="0" /></div>
+            <div><div class="label">Reverb <span data-reverbv="${i}">0%</span></div><input data-reverb="${i}" type="range" min="0" max="1" step="0.01" value="0" /></div>
+            <div><div class="label">Delay Mix <span data-delaymixv="${i}">0%</span></div><input data-delaymix="${i}" type="range" min="0" max="1" step="0.01" value="0" /></div>
+            <div><div class="label">Delay Time <span data-delaytimev="${i}">0.18s</span></div><input data-delaytime="${i}" type="range" min="0.05" max="0.8" step="0.01" value="0.18" /></div>
+            <div><div class="label">Feedback <span data-feedbackv="${i}">20%</span></div><input data-feedback="${i}" type="range" min="0" max="0.85" step="0.01" value="0.2" /></div>
+          </div>
         `;
         tracksWrap.appendChild(el);
         trackEls.push(el);
       }
+      $('trimKeepBtn').textContent = '選択クリップだけ残す';
+      $('trimDeleteBtn').textContent = '選択クリップ削除';
+      $('splitBtn').textContent = 'カーソル位置で分割';
+      $('duplicateBtn').textContent = '選択クリップ複製';
+      const title = document.querySelector('.card strong');
+      if (title) title.textContent = 'クリップ編集';
+      const editMeta = document.querySelector('.card .meta');
+      if (editMeta) editMeta.textContent = 'タイムラインをクリックでクリップ選択・カーソル移動。ダブルクリックまたは分割ボタンでカーソル位置で分割します。';
       renderTracks();
     }
 
+    function formatTrackMeta(track) {
+      if (!track.clips.length) return 'Empty';
+      const dur = getTrackDuration(track).toFixed(2);
+      const parts = [`${track.clips.length} clips`, `${dur}s`];
+      if (track.selectedClipId) parts.push('clip selected');
+      if (track.mute) parts.push('muted');
+      if (track.solo) parts.push('solo');
+      if (track.reverbMix > 0.01) parts.push(`rev ${Math.round(track.reverbMix * 100)}%`);
+      if (track.delayMix > 0.01) parts.push(`dly ${Math.round(track.delayMix * 100)}%`);
+      return parts.join(' · ');
+    }
+
     function renderTracks() {
-      trackEls.forEach((el, i) => {
-        const t = tracks[i];
-        el.classList.toggle('selected', state.selectedTrack === i);
-        el.querySelector('.track-name').textContent = t.buffer ? `${t.name} loaded` : 'Empty';
-        const dur = t.buffer ? t.buffer.duration : 0;
-        el.querySelector('.meta').textContent = `${dur.toFixed(2)}s ${t.mute ? '· muted' : ''} ${t.solo ? '· solo' : ''}`;
-        const pct = t.buffer ? Math.min(100, (t.buffer.duration / loopDuration()) * 100) : 0;
-        el.querySelector('.fill').style.width = `${pct}%`;
-        const [selectBtn, muteBtn, soloBtn] = el.querySelectorAll('button');
-        muteBtn.classList.toggle('active', t.mute);
-        soloBtn.classList.toggle('active', t.solo);
-        el.querySelector('[data-gain]').value = t.gain;
-        el.querySelector('[data-pan]').value = t.pan;
-      });
+      for (let i = 0; i < TRACK_COUNT; i++) {
+        const el = trackEls[i];
+        const track = tracks[i];
+        el.classList.toggle('selected', i === state.selectedTrack);
+        const [muteBtn, soloBtn] = el.querySelectorAll('[data-mute], [data-solo]');
+        if (muteBtn) muteBtn.classList.toggle('active', track.mute);
+        if (soloBtn) soloBtn.classList.toggle('active', track.solo);
+        el.querySelector('.meta-text').textContent = formatTrackMeta(track);
+        el.querySelector('[data-gain]').value = track.gain;
+        el.querySelector('[data-pan]').value = track.pan;
+        const gvv = el.querySelector('[data-gainv]'); if (gvv) gvv.textContent = `${Math.round(track.gain * 100)}%`;
+        const pvv = el.querySelector('[data-panv]'); if (pvv) pvv.textContent = `${Number(track.pan).toFixed(2)}`;
+        el.querySelector('[data-reverb]').value = track.reverbMix;
+        el.querySelector('[data-delaymix]').value = track.delayMix;
+        el.querySelector('[data-delaytime]').value = track.delayTime;
+        el.querySelector('[data-feedback]').value = track.delayFeedback;
+        const rv = el.querySelector('[data-reverbv]'); if (rv) rv.textContent = `${Math.round(track.reverbMix * 100)}%`;
+        const dmv = el.querySelector('[data-delaymixv]'); if (dmv) dmv.textContent = `${Math.round(track.delayMix * 100)}%`;
+        const dtv = el.querySelector('[data-delaytimev]'); if (dtv) dtv.textContent = `${Number(track.delayTime).toFixed(2)}s`;
+        const fbv = el.querySelector('[data-feedbackv]'); if (fbv) fbv.textContent = `${Math.round(track.delayFeedback * 100)}%`;
+        drawWaveform(i);
+      }
       trackSelect.value = String(state.selectedTrack);
+      $('loopBtn').classList.toggle('active', state.loop);
       updateTransportInfo();
     }
 
-    function stopAllSources() {
-      activeSources.forEach(src => {
-        try { src.stop(); } catch (_) {}
-      });
-      activeSources = [];
+    function drawBufferSegment(ctx, buffer, x, w, h, color) {
+      const data = buffer.getChannelData(0);
+      const px = Math.max(1, Math.floor(w));
+      const step = Math.max(1, Math.floor(data.length / px));
+      ctx.strokeStyle = color;
+      ctx.beginPath();
+      for (let i = 0; i < px; i++) {
+        let min = 1, max = -1;
+        const start = i * step;
+        const end = Math.min(start + step, data.length);
+        for (let j = start; j < end; j++) {
+          const v = data[j] || 0;
+          if (v < min) min = v;
+          if (v > max) max = v;
+        }
+        const y1 = ((1 + min) * 0.5) * h;
+        const y2 = ((1 + max) * 0.5) * h;
+        ctx.moveTo(x + i + 0.5, y1);
+        ctx.lineTo(x + i + 0.5, y2);
+      }
+      ctx.stroke();
     }
 
-    function updatePositionLoop() {
-      clearInterval(transportTimer);
-      transportTimer = setInterval(() => {
-        if (!audioCtx || !isPlaying) return;
-        const dur = loopDuration();
-        const pos = Math.max(0, (audioCtx.currentTime - loopStartTime) % dur);
-        positionText.textContent = pos.toFixed(2);
-      }, 50);
-    }
+    function drawWaveform(index) {
+      const canvas = trackEls[index].querySelector('canvas.wave');
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const cssW = canvas.clientWidth || 900;
+      const cssH = canvas.clientHeight || 78;
+      if (canvas.width !== Math.floor(cssW * dpr) || canvas.height !== Math.floor(cssH * dpr)) {
+        canvas.width = Math.floor(cssW * dpr);
+        canvas.height = Math.floor(cssH * dpr);
+      }
+      ctx.setTransform(1,0,0,1,0,0);
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.scale(dpr, dpr);
+      ctx.fillStyle = '#0d1219';
+      ctx.fillRect(0,0,cssW,cssH);
+      ctx.strokeStyle = '#243045';
+      ctx.beginPath();
+      ctx.moveTo(0, cssH/2);
+      ctx.lineTo(cssW, cssH/2);
+      ctx.stroke();
 
-    function hasSolo() {
-      return tracks.some(t => t.solo);
-    }
-
-    function scheduleClick(loopAt, countInOnly = false) {
-      if (!state.metro && !countInOnly) return;
-      const beatDur = 60 / state.bpm;
-      const totalBeats = state.bars * 4;
-      for (let b = 0; b < totalBeats; b++) {
-        const t = loopAt + (b * beatDur);
-        const key = t.toFixed(3) + ':' + (countInOnly ? 'c' : 'm');
-        if (scheduledClickTimes.has(key)) continue;
-        scheduledClickTimes.add(key);
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'square';
-        osc.frequency.value = (b % 4 === 0) ? 1200 : 880;
-        gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.exponentialRampToValueAtTime(state.clickVolume || 0.25, t + 0.003);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
-        osc.connect(gain).connect(masterGain);
-        osc.start(t);
-        osc.stop(t + 0.09);
+      const track = tracks[index];
+      const total = Math.max(0.1, getTrackDuration(track));
+      const cursorX = (state.selectedTrack === index ? (state.timelineCursorTime / total) * cssW : null);
+      for (const clip of track.clips) {
+        const x = (clip.startTime / total) * cssW;
+        const w = Math.max(2, (clip.buffer.duration / total) * cssW);
+        const isSelected = clip.id === track.selectedClipId;
+        ctx.fillStyle = isSelected ? 'rgba(85,208,255,0.12)' : 'rgba(255,255,255,0.04)';
+        ctx.fillRect(x, 0, w, cssH);
+        drawBufferSegment(ctx, clip.buffer, x, w, cssH, isSelected ? '#79dbff' : '#68b6d8');
+        ctx.strokeStyle = isSelected ? '#7fdcff' : '#ff9f6e';
+        ctx.strokeRect(x + 0.5, 0.5, Math.max(1, w - 1), cssH - 1);
+      }
+      if (cursorX != null && Number.isFinite(cursorX)) {
+        const cx = Math.max(0, Math.min(cssW, cursorX));
+        ctx.strokeStyle = '#ffd166';
+        ctx.beginPath();
+        ctx.moveTo(cx + 0.5, 0);
+        ctx.lineTo(cx + 0.5, cssH);
+        ctx.stroke();
       }
     }
 
-    function scheduleLoop(loopAt) {
-      const soloOn = hasSolo();
-      tracks.forEach(track => {
-        if (!track.buffer) return;
-        if (track.mute) return;
-        if (soloOn && !track.solo) return;
-        const src = audioCtx.createBufferSource();
-        src.buffer = track.buffer;
-        const gain = audioCtx.createGain();
-        gain.gain.value = track.gain;
-        const panner = audioCtx.createStereoPanner();
-        panner.pan.value = track.pan;
-        src.connect(gain).connect(panner).connect(masterGain);
-        src.start(loopAt);
-        activeSources.push(src);
-      });
-      if (state.metro) scheduleClick(loopAt, false);
+    function updatePlayheads() {
+      clearInterval(playTimer);
+      playTimer = setInterval(() => {
+        if (!isPlaying) {
+          trackEls.forEach(el => el.querySelector('.playhead').style.left = '0%');
+          positionText.textContent = '0.00';
+          return;
+        }
+        const rawElapsed = Math.max(0, audioCtx.currentTime - playStartedAt);
+        const elapsed = state.loop && playbackCycleDuration > 0 ? (rawElapsed % playbackCycleDuration) : rawElapsed;
+        positionText.textContent = elapsed.toFixed(2);
+        tracks.forEach((track, i) => {
+          const total = Math.max(0.1, getTrackDuration(track));
+          const ratio = clamp(elapsed / total, 0, 1);
+          trackEls[i].querySelector('.playhead').style.left = `${ratio * 100}%`;
+        });
+      }, 40);
     }
 
-    function startPlayback() {
-      if (isPlaying) return;
-      const dur = loopDuration();
-      isPlaying = true;
-      loopStartTime = audioCtx.currentTime + 0.08;
-      nextLoopAt = loopStartTime;
-      stopAllSources();
-      scheduledClickTimes.clear();
-      scheduleLoop(nextLoopAt);
-      nextLoopAt += dur;
-      loopScheduler = setInterval(() => {
-        if (!isPlaying) return;
-        if (audioCtx.currentTime + 0.25 >= nextLoopAt) {
-          if (state.loop) {
-            scheduleLoop(nextLoopAt);
-            nextLoopAt += dur;
-          } else {
-            clearInterval(loopScheduler);
-          }
+    async function openMic() {
+      await ensureAudio();
+      if (mediaStream) return mediaStream;
+      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+      const src = audioCtx.createMediaStreamSource(mediaStream);
+      monitorGainNode = audioCtx.createGain();
+      monitorGainNode.gain.value = state.monitor ? 1 : 0;
+      src.connect(monitorGainNode).connect(masterGain);
+      micText.textContent = 'ON';
+      $('micToggleBtn').textContent = 'MIC OFF';
+      return mediaStream;
+    }
+
+    function closeMic() {
+      if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
+      mediaStream = null;
+      micText.textContent = 'OFF';
+      $('micToggleBtn').textContent = 'MIC ON';
+    }
+
+    function toggleMonitor() {
+      state.monitor = !state.monitor;
+      if (monitorGainNode) monitorGainNode.gain.value = state.monitor ? 1 : 0;
+      $('monitorBtn').classList.toggle('active', state.monitor);
+    }
+
+    function stopAllSources() {
+      playSources.forEach(src => { try { src.stop(); } catch (_) {} });
+      playSources = [];
+      activeVoiceCount = 0;
+      voicesText.textContent = '0';
+    }
+
+    function createTrackChain(ctx, track) {
+      const inputGain = ctx.createGain();
+      inputGain.gain.value = track.gain;
+      const panner = ctx.createStereoPanner();
+      panner.pan.value = track.pan;
+      const dryGain = ctx.createGain();
+      dryGain.gain.value = 1;
+      const wetRevGain = ctx.createGain();
+      wetRevGain.gain.value = track.reverbMix;
+      const wetDelayGain = ctx.createGain();
+      wetDelayGain.gain.value = track.delayMix;
+      const out = ctx.createGain();
+      const convolver = ctx.createConvolver();
+      convolver.buffer = generateImpulse(ctx);
+      const delay = ctx.createDelay(1.0);
+      delay.delayTime.value = track.delayTime;
+      const feedback = ctx.createGain();
+      feedback.gain.value = track.delayFeedback;
+      inputGain.connect(dryGain).connect(panner).connect(out);
+      inputGain.connect(convolver);
+      convolver.connect(wetRevGain).connect(panner).connect(out);
+      inputGain.connect(delay);
+      delay.connect(wetDelayGain).connect(panner).connect(out);
+      delay.connect(feedback).connect(delay);
+      return { input: inputGain, output: out };
+    }
+
+    function playTrack(track, when = 0, offline = null) {
+      const ctx = offline || audioCtx;
+      const chain = createTrackChain(ctx, track);
+      chain.output.connect(offline ? ctx.destination : masterGain);
+      for (const clip of track.clips) {
+        const source = ctx.createBufferSource();
+        source.buffer = clip.buffer;
+        source.connect(chain.input);
+        source.start(when + clip.startTime);
+        if (!offline) {
+          activeVoiceCount += 1;
+          voicesText.textContent = String(activeVoiceCount);
+          source.onended = () => {
+            activeVoiceCount = Math.max(0, activeVoiceCount - 1);
+            voicesText.textContent = String(activeVoiceCount);
+          };
+          playSources.push(source);
         }
-      }, 60);
-      updatePositionLoop();
-      statusText.textContent = 'Playing';
+      }
+    }
+
+    function scheduleMetronome(startAt, beats) {
+      for (let i = 0; i < beats; i++) {
+        const t = startAt + i * beatDuration();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.value = i % 4 === 0 ? 1200 : 900;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(state.clickVolume || 0.2, t + 0.003);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+        osc.connect(gain).connect(clickGain);
+        osc.start(t);
+        osc.stop(t + 0.08);
+      }
+    }
+
+    async function startPlayback() {
+      await ensureAudio();
+      if (isPlaying) return;
+      stopAllSources();
+      const soloOn = hasSolo();
+      const playable = tracks.filter(t => t.clips.length && !t.mute && (!soloOn || t.solo));
+      if (!playable.length) { setStatus('No clips'); return; }
+      const duration = Math.max(0.1, ...playable.map(getTrackDuration));
+      playbackCycleDuration = duration;
+      isPlaying = true;
+      playStartedAt = audioCtx.currentTime + 0.04;
+
+      const scheduleCycle = (cycleStart) => {
+        if (!isPlaying) return;
+        if (state.metro) {
+          const beats = Math.max(1, Math.ceil(duration / beatDuration()));
+          scheduleMetronome(cycleStart, beats);
+        }
+        playable.forEach(track => playTrack(track, cycleStart));
+        if (state.loop) {
+          setTimeout(() => scheduleCycle(cycleStart + duration), Math.max(10, duration * 1000 - 30));
+        } else {
+          setTimeout(() => {
+            if (!state.loop) stopTransport();
+          }, Math.max(10, duration * 1000 + 60));
+        }
+      };
+
+      scheduleCycle(playStartedAt);
+      updatePlayheads();
+      setStatus(state.loop ? 'Loop Playing' : 'Playing');
     }
 
     function stopTransport() {
       isPlaying = false;
       isRecording = false;
-      clearInterval(transportTimer);
-      clearInterval(loopScheduler);
+      clearInterval(playTimer);
+      clearTimeout(recordStopTimer);
       stopAllSources();
-      positionText.textContent = '0.00';
-      statusText.textContent = 'Stopped';
       if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
+        try { mediaRecorder.stop(); } catch (_) {}
       }
+      trackEls.forEach(el => el.querySelector('.playhead').style.left = '0%');
+      positionText.textContent = '0.00';
+      setStatus('Stopped');
+    }
+
+    function trimBufferStart(buffer, seconds) {
+      const shift = Math.floor(seconds * buffer.sampleRate);
+      if (shift <= 0) return buffer;
+      const len = Math.max(1, buffer.length - shift);
+      const out = audioCtx.createBuffer(buffer.numberOfChannels, len, buffer.sampleRate);
+      for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+        out.getChannelData(ch).set(buffer.getChannelData(ch).subarray(shift, shift + len));
+      }
+      return out;
+    }
+
+    function mixBuffers(a, b) {
+      const sampleRate = a.sampleRate;
+      const length = Math.max(a.length, b.length);
+      const channels = Math.max(a.numberOfChannels, b.numberOfChannels);
+      const out = audioCtx.createBuffer(channels, length, sampleRate);
+      for (let ch = 0; ch < channels; ch++) {
+        const outData = out.getChannelData(ch);
+        const aData = a.getChannelData(Math.min(ch, a.numberOfChannels - 1));
+        const bData = b.getChannelData(Math.min(ch, b.numberOfChannels - 1));
+        for (let i = 0; i < length; i++) {
+          outData[i] = clamp((aData[i] || 0) + (bData[i] || 0), -1, 1);
+        }
+      }
+      return out;
+    }
+
+    async function decodeRecordedBlob(blob) {
+      const arr = await blob.arrayBuffer();
+      return await audioCtx.decodeAudioData(arr.slice(0));
+    }
+
+    async function renderTrackToBuffer(track) {
+      const duration = Math.max(0.1, getTrackDuration(track));
+      const offline = new OfflineAudioContext(2, Math.ceil(duration * audioCtx.sampleRate), audioCtx.sampleRate);
+      playTrack(track, 0, offline);
+      return await offline.startRendering();
     }
 
     async function recordSelectedTrack() {
       await ensureAudio();
-      if (!mediaStream) {
-        await initMic();
-      }
+      if (!mediaStream) await openMic();
       if (isRecording) return;
-      const dur = loopDuration();
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : (MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '');
+
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : (MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '');
       mediaRecorder = new MediaRecorder(mediaStream, mimeType ? { mimeType } : undefined);
       recordChunks = [];
       mediaRecorder.ondataavailable = (e) => { if (e.data.size) recordChunks.push(e.data); };
       mediaRecorder.onstop = async () => {
-        const blob = new Blob(recordChunks, { type: recordChunks[0]?.type || 'audio/webm' });
-        const arr = await blob.arrayBuffer();
-        const buf = await audioCtx.decodeAudioData(arr.slice(0));
-        let trimmed = trimOrPadBuffer(buf, dur);
-        if (state.overdub && tracks[state.selectedTrack].buffer) {
-          trimmed = mixTwoBuffers(tracks[state.selectedTrack].buffer, trimmed, dur);
+        try {
+          if (!recordChunks.length) return;
+          const blob = new Blob(recordChunks, { type: recordChunks[0].type || 'audio/webm' });
+          let buffer = await decodeRecordedBlob(blob);
+          buffer = trimBufferStart(buffer, Math.max(0, Number(state.latencyMs || 0) / 1000));
+          const track = tracks[state.selectedTrack];
+          if (state.overdub && track.clips.length) {
+            const existing = await renderTrackToBuffer(track);
+            buffer = mixBuffers(existing, buffer);
+          }
+          setTrackSingleBuffer(track, buffer);
+          renderTracks();
+          setStatus('Recorded');
+        } catch (err) {
+          alert('録音データの処理に失敗しました: ' + err.message);
         }
-        tracks[state.selectedTrack].buffer = trimmed;
-        renderTracks();
-        statusText.textContent = 'Recorded';
-      queueAutosave();
       };
 
-      const startDelay = 0.08;
-      let recordStartAt = audioCtx.currentTime + startDelay;
+      if (isPlaying) stopTransport();
+      let startAt = audioCtx.currentTime + 0.08;
       if (state.countIn) {
-        const countDur = 4 * (60 / state.bpm);
-        scheduleClick(recordStartAt, true);
-        recordStartAt += countDur;
+        scheduleMetronome(startAt, 4);
+        startAt += 4 * beatDuration();
+      }
+      if (state.metro && state.recordBars !== 'inf') scheduleMetronome(startAt, Number(state.recordBars) * 4);
+      if (state.overdub) {
+        const soloOn = hasSolo();
+        tracks.forEach(track => {
+          if (!track.clips.length || track.mute || (soloOn && !track.solo)) return;
+          playTrack(track, startAt);
+        });
       }
 
-      if (isPlaying) {
-        stopTransport();
-        await ensureAudio();
-      }
-
-      mediaRecorder.start();
-      isRecording = true;
-      statusText.textContent = 'Recording';
-      positionText.textContent = '0.00';
-
-      if (state.metro) scheduleClick(recordStartAt, false);
-      if (state.loop) {
-        loopStartTime = recordStartAt;
-        updatePositionLoop();
-      }
-
-      if (state.overdub && tracks.some(t => t.buffer)) {
-        isPlaying = true;
-        loopStartTime = recordStartAt;
-        nextLoopAt = recordStartAt;
-        stopAllSources();
-        scheduledClickTimes.clear();
-        scheduleLoop(nextLoopAt);
-      }
+      const limitSec = recordDurationSeconds();
+      const delayMs = Math.max(0, (startAt - audioCtx.currentTime) * 1000);
+      isPlaying = true;
+      playStartedAt = startAt;
+      setStatus(state.countIn ? 'Count In' : 'Recording');
+      updatePlayheads();
 
       setTimeout(() => {
+        if (!mediaRecorder) return;
+        mediaRecorder.start(250);
+        isRecording = true;
+        setStatus('Recording');
+      }, delayMs);
+
+      recordStopTimer = setTimeout(() => {
         if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
         isRecording = false;
-        if (!state.overdub) {
-          clearInterval(transportTimer);
-          positionText.textContent = '0.00';
-        }
-        stopAllSources();
         isPlaying = false;
-      }, Math.max(100, (recordStartAt - audioCtx.currentTime + dur) * 1000));
+        stopAllSources();
+      }, Math.max(100, delayMs + limitSec * 1000));
     }
 
-    function trimOrPadBuffer(buffer, targetDur) {
-      const channels = Math.min(2, buffer.numberOfChannels);
-      const len = Math.floor(targetDur * buffer.sampleRate);
-      const out = audioCtx.createBuffer(channels, len, buffer.sampleRate);
-      for (let ch = 0; ch < channels; ch++) {
-        const source = buffer.getChannelData(ch);
-        const target = out.getChannelData(ch);
-        target.set(source.subarray(0, Math.min(source.length, len)));
+    function cloneAudioBuffer(buffer) {
+      const out = audioCtx.createBuffer(buffer.numberOfChannels, buffer.length, buffer.sampleRate);
+      for (let ch = 0; ch < buffer.numberOfChannels; ch++) out.getChannelData(ch).set(buffer.getChannelData(ch));
+      return out;
+    }
+
+    function sliceBuffer(buffer, startSample, endSample) {
+      const len = Math.max(1, endSample - startSample);
+      const out = audioCtx.createBuffer(buffer.numberOfChannels, len, buffer.sampleRate);
+      for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+        out.getChannelData(ch).set(buffer.getChannelData(ch).subarray(startSample, endSample));
       }
       return out;
     }
 
-    function mixTwoBuffers(a, b, targetDur) {
-      const sr = audioCtx.sampleRate;
-      const len = Math.floor(targetDur * sr);
-      const channels = Math.max(a.numberOfChannels, b.numberOfChannels, 1);
-      const out = audioCtx.createBuffer(Math.min(2, channels), len, sr);
-      for (let ch = 0; ch < out.numberOfChannels; ch++) {
-        const data = out.getChannelData(ch);
-        const aData = a.getChannelData(Math.min(ch, a.numberOfChannels - 1));
-        const bData = b.getChannelData(Math.min(ch, b.numberOfChannels - 1));
-        for (let i = 0; i < len; i++) {
-          const sum = (aData[i] || 0) + (bData[i] || 0);
-          data[i] = Math.max(-1, Math.min(1, sum));
-        }
+    function clipAtRatio(track, ratio) {
+      const total = Math.max(0.1, getTrackDuration(track));
+      const time = ratio * total;
+      return track.clips.find(clip => time >= clip.startTime && time <= clip.startTime + clip.buffer.duration + 1e-6) || null;
+    }
+
+    function splitClipAtTime(track, time) {
+      const clip = track.clips.find(c => time > c.startTime + 0.01 && time < c.startTime + c.buffer.duration - 0.01);
+      if (!clip) return false;
+      const splitOffset = time - clip.startTime;
+      const splitSample = Math.floor(splitOffset * clip.buffer.sampleRate);
+      if (splitSample <= 1 || splitSample >= clip.buffer.length - 1) return false;
+      const left = createClip(sliceBuffer(clip.buffer, 0, splitSample), clip.startTime);
+      const right = createClip(sliceBuffer(clip.buffer, splitSample, clip.buffer.length), clip.startTime + left.buffer.duration);
+      const idx = track.clips.findIndex(c => c.id === clip.id);
+      track.clips.splice(idx, 1, left, right);
+      track.selectedClipId = right.id;
+      normalizeTrackClips(track);
+      return true;
+    }
+
+    function keepOnlySelectedClip(index) {
+      const track = tracks[index];
+      const clip = getSelectedClip(track);
+      if (!clip) return;
+      track.clips = [createClip(cloneAudioBuffer(clip.buffer), 0)];
+      track.selectedClipId = track.clips[0].id;
+      renderTracks();
+      setStatus('Selected clip kept');
+    }
+
+    function deleteSelectedClip(index) {
+      const track = tracks[index];
+      const clip = getSelectedClip(track);
+      if (!clip) return;
+      track.clips = track.clips.filter(c => c.id !== clip.id);
+      normalizeTrackClips(track);
+      renderTracks();
+      setStatus('Selected clip deleted');
+    }
+
+    function duplicateSelectedClip(index) {
+      const track = tracks[index];
+      const clip = getSelectedClip(track);
+      if (!clip) return;
+      const idx = track.clips.findIndex(c => c.id === clip.id);
+      const newClip = createClip(cloneAudioBuffer(clip.buffer), clip.startTime + clip.buffer.duration);
+      track.clips.splice(idx + 1, 0, newClip);
+      track.selectedClipId = newClip.id;
+      normalizeTrackClips(track);
+      renderTracks();
+      setStatus('Selected clip duplicated');
+    }
+
+    function splitSelectedClipCenter(index) {
+      const track = tracks[index];
+      const clip = getSelectedClip(track);
+      if (!clip) return;
+      const ok = splitClipAtTime(track, clip.startTime + clip.buffer.duration / 2);
+      if (ok) { renderTracks(); setStatus('Selected clip split'); }
+    }
+
+    function splitAtTimelineCursor(index) {
+      const track = tracks[index];
+      const total = Math.max(0.1, getTrackDuration(track));
+      const time = clamp(state.timelineCursorTime, 0, total);
+      const ok = splitClipAtTime(track, time);
+      if (ok) {
+        renderTracks();
+        setStatus('Split at cursor position');
+      } else {
+        setStatus('カーソル位置で分割できません');
       }
-      return out;
     }
 
     async function importAudioToTrack(file, index) {
       await ensureAudio();
       const arr = await file.arrayBuffer();
-      const buf = await audioCtx.decodeAudioData(arr.slice(0));
-      tracks[index].buffer = trimOrPadBuffer(buf, loopDuration());
+      const buffer = await audioCtx.decodeAudioData(arr.slice(0));
+      setTrackSingleBuffer(tracks[index], buffer);
       renderTracks();
-      statusText.textContent = `Track ${index + 1} imported`;
-      queueAutosave();
+      setStatus(`Track ${index + 1} imported`);
     }
 
     async function renderMixdownBuffer() {
       await ensureAudio();
-      const dur = loopDuration();
-      const len = Math.floor(audioCtx.sampleRate * dur);
-      const offline = new OfflineAudioContext(2, len, audioCtx.sampleRate);
-      const soloOn = hasSolo();
-      tracks.forEach(track => {
-        if (!track.buffer || track.mute || (soloOn && !track.solo)) return;
-        const src = offline.createBufferSource();
-        src.buffer = track.buffer;
-        const gain = offline.createGain();
-        gain.gain.value = track.gain * state.masterVolume;
-        const panner = offline.createStereoPanner();
-        panner.pan.value = track.pan;
-        src.connect(gain).connect(panner).connect(offline.destination);
-        src.start(0);
-      });
+      const selected = tracks.filter(t => t.clips.length && !t.mute && (!hasSolo() || t.solo));
+      if (!selected.length) throw new Error('書き出す音声がありません');
+      const maxDuration = Math.max(...selected.map(getTrackDuration));
+      const offline = new OfflineAudioContext(2, Math.ceil(maxDuration * audioCtx.sampleRate), audioCtx.sampleRate);
+      selected.forEach(track => playTrack(track, 0, offline));
       return await offline.startRendering();
     }
 
     function audioBufferToWav(buffer) {
       const numChannels = buffer.numberOfChannels;
       const sampleRate = buffer.sampleRate;
-      const format = 1;
       const bitDepth = 16;
-      const samples = buffer.length;
-      const blockAlign = numChannels * bitDepth / 8;
-      const byteRate = sampleRate * blockAlign;
-      const dataSize = samples * blockAlign;
+      const bytesPerSample = bitDepth / 8;
+      const blockAlign = numChannels * bytesPerSample;
+      const dataSize = buffer.length * blockAlign;
       const ab = new ArrayBuffer(44 + dataSize);
       const view = new DataView(ab);
       let offset = 0;
       const writeString = (s) => { for (let i = 0; i < s.length; i++) view.setUint8(offset++, s.charCodeAt(i)); };
       writeString('RIFF'); view.setUint32(offset, 36 + dataSize, true); offset += 4;
       writeString('WAVE'); writeString('fmt '); view.setUint32(offset, 16, true); offset += 4;
-      view.setUint16(offset, format, true); offset += 2;
+      view.setUint16(offset, 1, true); offset += 2;
       view.setUint16(offset, numChannels, true); offset += 2;
       view.setUint32(offset, sampleRate, true); offset += 4;
-      view.setUint32(offset, byteRate, true); offset += 4;
+      view.setUint32(offset, sampleRate * blockAlign, true); offset += 4;
       view.setUint16(offset, blockAlign, true); offset += 2;
       view.setUint16(offset, bitDepth, true); offset += 2;
       writeString('data'); view.setUint32(offset, dataSize, true); offset += 4;
-      const chData = Array.from({ length: numChannels }, (_, i) => buffer.getChannelData(i));
-      for (let i = 0; i < samples; i++) {
+      const channels = Array.from({ length: numChannels }, (_, i) => buffer.getChannelData(i));
+      for (let i = 0; i < buffer.length; i++) {
         for (let ch = 0; ch < numChannels; ch++) {
-          let s = Math.max(-1, Math.min(1, chData[ch][i] || 0));
-          view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+          let sample = clamp(channels[ch][i] || 0, -1, 1);
+          view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
           offset += 2;
         }
       }
@@ -912,257 +943,280 @@
     function downloadBlob(blob, filename) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
+      a.href = url; a.download = filename; a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
     async function bufferToBase64Wav(buffer) {
-      const blob = audioBufferToWav(buffer);
-      const arr = await blob.arrayBuffer();
+      const wav = audioBufferToWav(buffer);
+      const arr = new Uint8Array(await wav.arrayBuffer());
       let binary = '';
-      const bytes = new Uint8Array(arr);
-      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      for (let i = 0; i < arr.length; i++) binary += String.fromCharCode(arr[i]);
       return btoa(binary);
     }
 
-    async function saveProject() {
-      const data = await buildProjectData(true);
-      const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-      downloadBlob(blob, `layerrec-project-${Date.now()}.json`);
-      statusText.textContent = 'Project exported';
+    async function buildProjectData() {
+      return {
+        version: 2,
+        bpm: state.bpm,
+        recordBars: state.recordBars,
+        masterVolume: state.masterVolume,
+        clickVolume: state.clickVolume,
+        latencyMs: state.latencyMs,
+        tracks: await Promise.all(tracks.map(async (track) => ({
+          name: track.name,
+          mute: track.mute,
+          solo: track.solo,
+          gain: track.gain,
+          pan: track.pan,
+          reverbMix: track.reverbMix,
+          delayTime: track.delayTime,
+          delayFeedback: track.delayFeedback,
+          delayMix: track.delayMix,
+          selectedClipId: track.selectedClipId,
+          clips: await Promise.all(track.clips.map(async (clip) => ({
+            id: clip.id,
+            startTime: clip.startTime,
+            wavBase64: await bufferToBase64Wav(clip.buffer),
+          }))),
+        }))),
+      };
     }
 
-    async function saveProjectToIndexedDB() {
-      const suggested = projectNameInput.value.trim() || `project-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}`;
-      const payload = await buildProjectData(true);
-      const record = await putProjectRecord(suggested, payload);
-      projectNameInput.value = record.name;
-      await refreshProjectList(record.id);
-      setStatus(`IndexedDB saved: ${record.name}`);
-    }
-
-
-    async function loadProject(file) {
+    async function applyProjectData(data) {
       await ensureAudio();
-      const text = await file.text();
-      const data = JSON.parse(text);
       state.bpm = Number(data.bpm || 120);
-      state.bars = Number(data.bars || 4);
-      bpmInput.value = state.bpm;
-      barsInput.value = String(state.bars);
+      state.recordBars = String(data.recordBars || '4');
+      state.masterVolume = Number(data.masterVolume ?? 1);
+      state.clickVolume = Number(data.clickVolume ?? 0.25);
+      state.latencyMs = Number(data.latencyMs ?? 120);
+      bpmInput.value = String(state.bpm);
+      recordBarsInput.value = state.recordBars;
+      masterVol.value = String(state.masterVolume);
+      clickVol.value = String(state.clickVolume);
+      latencyMsInput.value = String(state.latencyMs);
+      if (masterGain) masterGain.gain.value = state.masterVolume;
+      if (clickGain) clickGain.gain.value = state.clickVolume;
       for (let i = 0; i < TRACK_COUNT; i++) {
         const src = data.tracks?.[i];
+        const t = tracks[i];
+        Object.assign(t, createTrack(i));
         if (!src) continue;
-        tracks[i].name = src.name || `Track ${i + 1}`;
-        tracks[i].mute = !!src.mute;
-        tracks[i].solo = !!src.solo;
-        tracks[i].gain = Number(src.gain ?? 1);
-        tracks[i].pan = Number(src.pan ?? 0);
-        if (src.wavBase64) {
-          const bytes = Uint8Array.from(atob(src.wavBase64), c => c.charCodeAt(0));
-          const buf = await audioCtx.decodeAudioData(bytes.buffer.slice(0));
-          tracks[i].buffer = trimOrPadBuffer(buf, loopDuration());
-        } else {
-          tracks[i].buffer = null;
+        t.name = src.name || `Track ${i + 1}`;
+        t.mute = !!src.mute;
+        t.solo = !!src.solo;
+        t.gain = Number(src.gain ?? 1);
+        t.pan = Number(src.pan ?? 0);
+        t.reverbMix = Number(src.reverbMix ?? 0);
+        t.delayTime = Number(src.delayTime ?? 0.18);
+        t.delayFeedback = Number(src.delayFeedback ?? 0.2);
+        t.delayMix = Number(src.delayMix ?? 0);
+        t.clips = [];
+        for (const c of (src.clips || [])) {
+          const bytes = Uint8Array.from(atob(c.wavBase64), ch => ch.charCodeAt(0));
+          const buffer = await audioCtx.decodeAudioData(bytes.buffer.slice(0));
+          t.clips.push({ id: c.id || `clip-${nextClipId++}`, startTime: Number(c.startTime || 0), buffer });
         }
+        t.selectedClipId = src.selectedClipId || t.clips[0]?.id || null;
+        normalizeTrackClips(t);
       }
       renderTracks();
-      statusText.textContent = 'Project loaded';
+      setStatus('Project loaded');
     }
 
+    function idbReq(req) { return new Promise((resolve, reject) => { req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error); }); }
+    function idbDone(tx) { return new Promise((resolve, reject) => { tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error); }); }
 
-    function setEditRatiosFromCanvas(canvas, startX, endX) {
-      const rect = canvas.getBoundingClientRect();
-      const x1 = Math.max(0, Math.min(rect.width, startX - rect.left));
-      const x2 = Math.max(0, Math.min(rect.width, endX - rect.left));
-      const a = Math.min(x1, x2) / rect.width;
-      const b = Math.max(x1, x2) / rect.width;
-      editStart.value = String(Math.round(a * 1000));
-      editEnd.value = String(Math.round(b * 1000));
-      refreshEditPanel();
-      renderTracks();
-    }
-
-    function bindWaveformPointerEvents() {
-      tracksWrap.addEventListener('pointerdown', (e) => {
-        const canvas = e.target.closest && e.target.closest('canvas.wave');
-        if (!canvas) return;
-        const index = Number(canvas.dataset.index || -1);
-        if (index < 0) return;
-        state.selectedTrack = index;
-        waveformDrag = { canvas, startX: e.clientX };
-        canvas.classList.add('canvas-touching');
-        if (canvas.setPointerCapture) canvas.setPointerCapture(e.pointerId);
-        setEditRatiosFromCanvas(canvas, e.clientX, e.clientX);
-        renderTracks();
-      });
-      tracksWrap.addEventListener('pointermove', (e) => {
-        if (!waveformDrag) return;
-        setEditRatiosFromCanvas(waveformDrag.canvas, waveformDrag.startX, e.clientX);
-      });
-      const endDrag = (e) => {
-        if (!waveformDrag) return;
-        waveformDrag.canvas.classList.remove('canvas-touching');
-        if (typeof e?.clientX === 'number') setEditRatiosFromCanvas(waveformDrag.canvas, waveformDrag.startX, e.clientX);
-        waveformDrag = null;
+    async function initDB() {
+      if (!('indexedDB' in window)) { storageInfo.textContent = 'IndexedDB: 非対応'; return null; }
+      if (projectDB) return projectDB;
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(STORE_PROJECTS)) db.createObjectStore(STORE_PROJECTS, { keyPath: 'id' });
       };
-      tracksWrap.addEventListener('pointerup', endDrag);
-      tracksWrap.addEventListener('pointercancel', endDrag);
-      tracksWrap.addEventListener('lostpointercapture', endDrag);
+      projectDB = await new Promise((resolve, reject) => { req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error); });
+      storageInfo.textContent = 'IndexedDB: 利用中';
+      return projectDB;
+    }
+
+    function slugify(name) {
+      return String(name || '').trim().toLowerCase().replace(/[^a-z0-9぀-ヿ㐀-龿_-]+/g, '-').replace(/^-+|-+$/g, '') || `project-${Date.now()}`;
+    }
+
+    async function saveProjectToDB() {
+      const db = await initDB();
+      if (!db) throw new Error('IndexedDBが使えません');
+      const payload = await buildProjectData();
+      const name = projectNameInput.value.trim() || `project-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}`;
+      const rec = { id: slugify(name), name, updatedAt: new Date().toISOString(), payload };
+      const tx = db.transaction(STORE_PROJECTS, 'readwrite');
+      tx.objectStore(STORE_PROJECTS).put(rec);
+      await idbDone(tx);
+      await refreshProjectList(rec.id);
+      setStatus(`Saved: ${name}`);
+    }
+
+    async function refreshProjectList(selected = '') {
+      const db = await initDB();
+      if (!db) return;
+      const tx = db.transaction(STORE_PROJECTS, 'readonly');
+      const rows = await idbReq(tx.objectStore(STORE_PROJECTS).getAll());
+      await idbDone(tx);
+      rows.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+      projectsSelect.innerHTML = '';
+      if (!rows.length) {
+        const opt = document.createElement('option'); opt.value = ''; opt.textContent = '保存済みプロジェクトなし'; projectsSelect.appendChild(opt);
+      } else {
+        rows.forEach(row => {
+          const opt = document.createElement('option');
+          opt.value = row.id;
+          opt.textContent = `${row.name} (${new Date(row.updatedAt).toLocaleString()})`;
+          projectsSelect.appendChild(opt);
+        });
+      }
+      if (selected) projectsSelect.value = selected;
+      storageInfo.textContent = `IndexedDB: ${rows.length}件保存`;
+    }
+
+    async function loadProjectFromDB() {
+      const id = projectsSelect.value;
+      if (!id) return;
+      const db = await initDB();
+      const tx = db.transaction(STORE_PROJECTS, 'readonly');
+      const rec = await idbReq(tx.objectStore(STORE_PROJECTS).get(id));
+      await idbDone(tx);
+      if (!rec?.payload) throw new Error('保存データがありません');
+      projectNameInput.value = rec.name || id;
+      await applyProjectData(rec.payload);
+    }
+
+    async function deleteProjectFromDB() {
+      const id = projectsSelect.value;
+      if (!id) return;
+      const db = await initDB();
+      const tx = db.transaction(STORE_PROJECTS, 'readwrite');
+      tx.objectStore(STORE_PROJECTS).delete(id);
+      await idbDone(tx);
+      await refreshProjectList();
+      setStatus(`Deleted: ${id}`);
+    }
+
+    async function saveProjectFile() {
+      const data = await buildProjectData();
+      downloadBlob(new Blob([JSON.stringify(data)], { type: 'application/json' }), `layerrec-project-${Date.now()}.json`);
+      setStatus('Project exported');
+    }
+
+    async function loadProjectFile(file) {
+      const data = JSON.parse(await file.text());
+      await applyProjectData(data);
+    }
+
+    function pointerRatio(canvas, clientX) {
+      const rect = canvas.getBoundingClientRect();
+      return clamp((clientX - rect.left) / rect.width, 0, 1);
+    }
+
+    function bindTimelineClick() {
+      tracksWrap.addEventListener('click', (e) => {
+        const canvas = e.target.closest('canvas.wave');
+        if (!canvas) return;
+        const index = Number(canvas.dataset.index);
+        state.selectedTrack = index;
+        const ratio = pointerRatio(canvas, e.clientX);
+        const track = tracks[index];
+        const total = Math.max(0.1, getTrackDuration(track));
+        state.timelineCursorTime = ratio * total;
+        const clip = clipAtRatio(track, ratio);
+        track.selectedClipId = clip?.id || null;
+        renderTracks();
+        setStatus(clip ? 'Clip selected / cursor moved' : 'カーソル移動');
+      });
+      tracksWrap.addEventListener('dblclick', (e) => {
+        const canvas = e.target.closest('canvas.wave');
+        if (!canvas) return;
+        const index = Number(canvas.dataset.index);
+        state.selectedTrack = index;
+        const ratio = pointerRatio(canvas, e.clientX);
+        const track = tracks[index];
+        const total = Math.max(0.1, getTrackDuration(track));
+        const ok = splitClipAtTime(track, ratio * total);
+        renderTracks();
+        setStatus(ok ? 'Split at timeline position' : 'Splitできない位置です');
+      });
     }
 
     function bindEvents() {
-      $('initMicBtn').onclick = async () => {
-        try { await initMic(); } catch (e) { alert('マイクを有効化できませんでした: ' + e.message); }
-      };
-      bpmInput.onchange = () => { state.bpm = Math.max(40, Math.min(240, Number(bpmInput.value || 120))); updateTransportInfo(); renderTracks(); };
-      barsInput.onchange = () => { state.bars = Number(barsInput.value); updateTransportInfo(); renderTracks(); };
-      trackSelect.onchange = () => { state.selectedTrack = Number(trackSelect.value); renderTracks(); };
-      masterVol.oninput = () => { state.masterVolume = Number(masterVol.value); if (masterGain) masterGain.gain.value = state.masterVolume; };
-      clickVol.oninput = () => { state.clickVolume = Number(clickVol.value); queueAutosave(); };
-      autosaveBtn.onclick = async () => {
-        state.autoSave = !state.autoSave;
-        autosaveBtn.classList.toggle('active', state.autoSave);
-        autosaveBtn.textContent = state.autoSave ? 'Auto Save ON' : 'Auto Save OFF';
-        if (state.autoSave) { try { await saveAutosave(); } catch (e) { console.warn('autosave toggle save failed', e); } }
-      };
-      restoreAutosaveBtn.onclick = async () => {
-        try { await restoreAutosave(); } catch (e) { alert('自動保存の復元に失敗しました: ' + e.message); }
-      };
-
-      latencyMsInput.onchange = () => {
-        state.latencyMs = Math.max(0, Math.min(500, Number(latencyMsInput.value || 0)));
-        latencyMsInput.value = String(state.latencyMs);
-        updateTransportInfo();
-        queueAutosave();
-      };
-
-      const toggleBtn = (key, id) => {
-        $(id).onclick = () => {
-          state[key] = !state[key];
-          $(id).classList.toggle('active', state[key]);
-        };
-      };
-      toggleBtn('metro', 'metroBtn');
-      toggleBtn('countIn', 'countBtn');
-      toggleBtn('loop', 'loopBtn');
-      toggleBtn('overdub', 'overdubBtn');
-
-      $('playBtn').onclick = async () => { await ensureAudio(); startPlayback(); };
+      $('micToggleBtn').onclick = async () => { try { if (mediaStream) closeMic(); else await openMic(); } catch (e) { alert('マイクの切り替えに失敗しました: ' + e.message); } };
+      $('monitorBtn').onclick = () => toggleMonitor();
+      $('metroBtn').onclick = () => { state.metro = !state.metro; $('metroBtn').classList.toggle('active', state.metro); };
+      $('countBtn').onclick = () => { state.countIn = !state.countIn; $('countBtn').classList.toggle('active', state.countIn); };
+      $('overdubBtn').onclick = () => { state.overdub = !state.overdub; $('overdubBtn').classList.toggle('active', state.overdub); };
+      $('loopBtn').onclick = () => { state.loop = !state.loop; $('loopBtn').classList.toggle('active', state.loop); setStatus(state.loop ? 'Loop ON' : 'Loop OFF'); };
+      $('playBtn').onclick = async () => { try { await startPlayback(); } catch (e) { alert('再生に失敗しました: ' + e.message); } };
+      $('recBtn').onclick = async () => { try { await recordSelectedTrack(); } catch (e) { alert('録音に失敗しました: ' + e.message); } };
       $('stopBtn').onclick = () => stopTransport();
-      $('recBtn').onclick = async () => {
-        try { await recordSelectedTrack(); } catch (e) { alert('録音に失敗しました: ' + e.message); }
-      };
-      $('clearTrackBtn').onclick = () => { tracks[state.selectedTrack].buffer = null; renderTracks(); };
-      $('clearAllBtn').onclick = () => { tracks.forEach(t => t.buffer = null); renderTracks(); };
+      $('clearTrackBtn').onclick = () => { tracks[state.selectedTrack] = createTrack(state.selectedTrack); renderTracks(); };
+      $('clearAllBtn').onclick = () => { for (let i = 0; i < TRACK_COUNT; i++) tracks[i] = createTrack(i); renderTracks(); };
+      $('trimKeepBtn').onclick = () => keepOnlySelectedClip(state.selectedTrack);
+      $('trimDeleteBtn').onclick = () => deleteSelectedClip(state.selectedTrack);
+      $('splitBtn').onclick = () => splitAtTimelineCursor(state.selectedTrack);
+      $('duplicateBtn').onclick = () => duplicateSelectedClip(state.selectedTrack);
+      $('resetSelectionBtn').onclick = () => { tracks[state.selectedTrack].selectedClipId = null; renderTracks(); };
+      $('saveProjectBtn').onclick = async () => { try { await saveProjectFile(); } catch (e) { alert('JSON保存に失敗しました: ' + e.message); } };
+      $('loadProjectInput').onchange = async (e) => { const file = e.target.files?.[0]; if (!file) return; try { await loadProjectFile(file); } catch (err) { alert('JSON読込に失敗しました: ' + err.message); } e.target.value = ''; };
+      $('saveIdbBtn').onclick = async () => { try { await saveProjectToDB(); } catch (e) { alert('保存に失敗しました: ' + e.message); } };
+      $('loadIdbBtn').onclick = async () => { try { await loadProjectFromDB(); } catch (e) { alert('読込に失敗しました: ' + e.message); } };
+      $('deleteIdbBtn').onclick = async () => { try { await deleteProjectFromDB(); } catch (e) { alert('削除に失敗しました: ' + e.message); } };
+      $('exportWavBtn').onclick = async () => { try { const mixed = await renderMixdownBuffer(); downloadBlob(audioBufferToWav(mixed), `layerrec-mix-${Date.now()}.wav`); setStatus('WAV exported'); } catch (e) { alert('WAV書き出しに失敗しました: ' + e.message); } };
 
-      $('exportWavBtn').onclick = async () => {
-        const mix = await renderMixdownBuffer();
-        downloadBlob(audioBufferToWav(mix), `layerrec-mix-${Date.now()}.wav`);
-        statusText.textContent = 'WAV exported';
-      };
-      $('saveProjectBtn').onclick = async () => {
-        try { await saveProject(); } catch (e) { alert('保存に失敗しました: ' + e.message); }
-      };
-      $('loadProjectInput').onchange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        try { await loadProject(file); } catch (err) { alert('Project読み込み失敗: ' + err.message); }
-        e.target.value = '';
-      };
-      $('saveIdbBtn').onclick = async () => {
-        try { await saveProjectToIndexedDB(); } catch (e) { alert('IndexedDB保存に失敗しました: ' + e.message); }
-      };
-      $('loadIdbBtn').onclick = async () => {
-        const id = projectsSelect.value;
-        if (!id) return;
-        try {
-          const row = await getProjectRecord(id);
-          if (!row?.payload) throw new Error('保存データがありません');
-          projectNameInput.value = row.name || id;
-          await applyProjectData(row.payload);
-          setStatus(`IndexedDB loaded: ${row.name || id}`);
-        } catch (e) {
-          alert('IndexedDB読込に失敗しました: ' + e.message);
-        }
-      };
-      $('deleteIdbBtn').onclick = async () => {
-        const id = projectsSelect.value;
-        if (!id) return;
-        try {
-          await deleteProjectRecord(id);
-          await refreshProjectList();
-          setStatus(`Deleted: ${id}`);
-        } catch (e) {
-          alert('削除に失敗しました: ' + e.message);
-        }
-      };
+      bpmInput.oninput = () => { state.bpm = clamp(Number(bpmInput.value || 120), 40, 240); updateTransportInfo(); };
+      recordBarsInput.onchange = () => { state.recordBars = recordBarsInput.value; updateTransportInfo(); };
+      trackSelect.onchange = () => { state.selectedTrack = Number(trackSelect.value || 0); renderTracks(); };
+      masterVol.oninput = () => { state.masterVolume = Number(masterVol.value); if (masterGain) masterGain.gain.value = state.masterVolume; };
+      clickVol.oninput = () => { state.clickVolume = Number(clickVol.value); if (clickGain) clickGain.gain.value = state.clickVolume; };
+      latencyMsInput.oninput = () => { state.latencyMs = Number(latencyMsInput.value || 120); };
 
       tracksWrap.addEventListener('click', (e) => {
-        const target = e.target;
-        if (!(target instanceof HTMLElement)) return;
-        if (target.dataset.select) {
-          state.selectedTrack = Number(target.dataset.select);
-          renderTracks();
-        }
-        if (target.dataset.mute) {
-          const i = Number(target.dataset.mute);
-          tracks[i].mute = !tracks[i].mute;
-          renderTracks();
-        }
-        if (target.dataset.solo) {
-          const i = Number(target.dataset.solo);
-          tracks[i].solo = !tracks[i].solo;
-          renderTracks();
-        }
+        const select = e.target.closest('[data-select]');
+        const mute = e.target.closest('[data-mute]');
+        const solo = e.target.closest('[data-solo]');
+        if (select) { state.selectedTrack = Number(select.dataset.select); renderTracks(); }
+        if (mute) { const i = Number(mute.dataset.mute); tracks[i].mute = !tracks[i].mute; renderTracks(); }
+        if (solo) { const i = Number(solo.dataset.solo); tracks[i].solo = !tracks[i].solo; renderTracks(); }
       });
-
       tracksWrap.addEventListener('input', async (e) => {
-        const target = e.target;
-        if (!(target instanceof HTMLElement)) return;
-        if (target.dataset.gain) {
-          tracks[Number(target.dataset.gain)].gain = Number(target.value);
+        const t = e.target;
+        if (t.matches('[data-import]')) {
+          const i = Number(t.dataset.import); const file = t.files?.[0]; if (file) await importAudioToTrack(file, i); t.value = ''; return;
         }
-        if (target.dataset.pan) {
-          tracks[Number(target.dataset.pan)].pan = Number(target.value);
-        }
-      });
-
-      tracksWrap.addEventListener('change', async (e) => {
-        const target = e.target;
-        if (!(target instanceof HTMLInputElement)) return;
-        if (target.dataset.import) {
-          const file = target.files[0];
-          if (file) {
-            try { await importAudioToTrack(file, Number(target.dataset.import)); }
-            catch (err) { alert('音源読込に失敗しました: ' + err.message); }
-          }
-          target.value = '';
-        }
+        const dataAttr = ['gain','pan','reverb','delaymix','delaytime','feedback'].find(a => t.matches(`[data-${a}]`));
+        if (!dataAttr) return;
+        const index = Number(t.dataset[dataAttr]);
+        const track = tracks[index];
+        if (dataAttr === 'gain') track.gain = Number(t.value);
+        if (dataAttr === 'pan') track.pan = Number(t.value);
+        if (dataAttr === 'reverb') track.reverbMix = Number(t.value);
+        if (dataAttr === 'delaymix') track.delayMix = Number(t.value);
+        if (dataAttr === 'delaytime') track.delayTime = Number(t.value);
+        if (dataAttr === 'feedback') track.delayFeedback = Number(t.value);
+        renderTracks();
       });
     }
 
-    async function bootstrap() {
+    async function boot() {
       setupTracks();
       bindEvents();
+      bindTimelineClick();
+      await initDB().catch(() => null);
+      await refreshProjectList().catch(() => null);
       updateTransportInfo();
-      try {
-        await initProjectDB();
-      } catch (e) {
-        storageMode = 'localStorage';
-        if (storageInfo) storageInfo.textContent = 'IndexedDB初期化失敗 / localStorage使用';
-        console.warn('IndexedDB init failed', e);
-      }
-      try {
-        await refreshProjectList();
-      } catch (e) {
-        console.warn('project list refresh failed', e);
-      }
+      renderTracks();
+      setStatus('Ready');
     }
 
-    bootstrap();
+    boot();
   </script>
 </body>
 </html>
