@@ -335,6 +335,157 @@
       }
     }
 
+
+    /* ultra compact overrides */
+    body { overflow-y: auto; }
+    .app { max-width: 1560px; padding: 6px 8px; }
+    .app-shell { gap: 6px; }
+    h1 { margin: 0 0 2px; font-size: 18px; line-height: 1.05; }
+    .sub { font-size: 10px; line-height: 1.15; margin-bottom: 0; }
+    .card {
+      padding: 6px 8px;
+      border-radius: 10px;
+      margin: 0 0 6px;
+    }
+    .top-actions .card { padding-top: 6px; padding-bottom: 6px; }
+    .transport { gap: 6px; align-items: center; }
+    .pill {
+      padding: 4px 7px;
+      font-size: 10px;
+      line-height: 1.1;
+    }
+    .beat-indicator {
+      margin-top: 4px;
+      gap: 6px;
+    }
+    .beat-dot {
+      width: 8px;
+      height: 8px;
+    }
+    .grid {
+      grid-template-columns: 95px 120px 120px 150px 150px 120px 130px 1fr;
+      gap: 6px;
+      align-items: end;
+    }
+    .label {
+      font-size: 10px;
+      margin-bottom: 2px;
+      line-height: 1.1;
+    }
+    input[type="number"], input[type="text"], select, input[type="file"] {
+      min-height: 30px;
+      padding: 4px 7px;
+      border-radius: 7px;
+      font-size: 12px;
+    }
+    input[type="range"] {
+      height: 18px;
+    }
+    button {
+      min-height: 30px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      font-size: 12px;
+      line-height: 1.05;
+    }
+    .row { gap: 6px; }
+    .top-actions.sticky { top: 0; }
+    .top-actions .card + .card { margin-top: 4px; }
+    .workspace {
+      grid-template-columns: 260px 1fr;
+      gap: 6px;
+    }
+    .side-panel {
+      top: 104px;
+      max-height: calc(100vh - 112px);
+      gap: 6px;
+    }
+    .tracks-scroller {
+      max-height: calc(100vh - 112px);
+    }
+    .compact-card-title { margin-bottom: 4px; }
+    .mini-note { font-size: 10px; line-height: 1.15; }
+    .pin-actions { gap: 4px; }
+    .pin-actions button { min-height: 28px; padding: 3px 7px; }
+    .footer { font-size: 10px; line-height: 1.25; }
+
+    #projectNameInput, #projectsSelect { min-height: 30px; }
+    #analyzeResult { margin-top: 2px !important; }
+    #storageInfo { font-size: 10px; }
+    .meta { font-size: 10px; line-height: 1.2; }
+
+    #micToggleBtn, #monitorBtn, #metroBtn, #countBtn, #overdubBtn, #loopBtn,
+    #toStartBtn, #playBtn, #appendRecBtn, #overwriteRecBtn, #recBtn, #stopBtn,
+    #clearTrackBtn, #clearAllBtn,
+    #saveIdbBtn, #loadIdbBtn, #deleteIdbBtn, #exportWavBtn, #saveProjectBtn,
+    #calibrateBtn, #analyzeBtn, #trimKeepBtn, #trimDeleteBtn, #splitBtn,
+    #duplicateBtn, #resetSelectionBtn {
+      min-height: 30px;
+      padding-top: 4px;
+      padding-bottom: 4px;
+      font-size: 12px;
+    }
+
+    .track {
+      padding: 6px;
+      gap: 6px;
+      border-radius: 10px;
+    }
+    .track-top {
+      grid-template-columns: 46px 1fr 190px;
+      gap: 6px;
+    }
+    .track-body, .track-fx {
+      gap: 6px;
+      grid-template-columns: repeat(6, minmax(70px, 1fr));
+    }
+    .wave-wrap {
+      height: 58px;
+      border-radius: 8px;
+    }
+    canvas.wave { height: 58px; }
+    .select-btn {
+      min-width: 44px;
+      padding-left: 0;
+      padding-right: 0;
+    }
+
+    .compact-card-title strong,
+    .card strong {
+      line-height: 1.1;
+      font-size: 14px;
+    }
+
+    .side-panel .mini-note { display: none; }
+
+    @media (max-width: 1280px) {
+      .grid {
+        grid-template-columns: repeat(4, minmax(110px, 1fr));
+      }
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+      .side-panel {
+        position: static;
+        max-height: none;
+      }
+      .tracks-scroller {
+        max-height: none;
+      }
+    }
+    @media (max-width: 760px) {
+      .grid {
+        grid-template-columns: repeat(2, minmax(100px, 1fr));
+      }
+      .track-top {
+        grid-template-columns: 46px 1fr;
+      }
+      .track-top > :last-child { grid-column: 1 / -1; }
+      .track-body, .track-fx {
+        grid-template-columns: repeat(3, minmax(80px, 1fr));
+      }
+    }
+
 </style>
 </head>
 <body>
@@ -392,16 +543,16 @@
         <input id="clickVol" type="range" min="0" max="1" step="0.01" value="0.25" />
       </div>
       <div>
-        <div class="label">録音遅延補正(ms)</div>
+        <div class="label">遅延(ms)</div>
         <input id="latencyMsInput" type="number" min="0" max="500" step="5" value="120" />
       </div>
       <div>
         <div class="label">自動測定</div>
-        <button id="calibrateBtn">遅延を自動測定</button>
+        <button id="calibrateBtn">自動測定</button>
       </div>
       <div>
         <div class="label">素材解析</div>
-        <button id="analyzeTrackBtn">選択トラックを解析</button>
+        <button id="analyzeTrackBtn">トラック解析</button>
       </div>
     </div>
 
@@ -425,7 +576,7 @@
       </div>
       <div class="row" style="margin-top:10px; align-items:end;">
         <div style="min-width:240px; flex:1;">
-          <div class="label">保存済みプロジェクト</div>
+          <div class="label">保存済み</div>
           <select id="projectsSelect"></select>
         </div>
         <div class="meta" id="storageInfo">IndexedDB: 初期化前</div>
@@ -442,18 +593,18 @@
         <button id="loopBtn">↻ Loop</button>
         <button id="toStartBtn">|◀ Start</button>
         <button id="playBtn" class="primary">▶ Play</button>
-        <button id="appendRecBtn">＋録音（追加）</button>
-        <button id="overwriteRecBtn" class="active">録音し直し</button>
+        <button id="appendRecBtn">追加録音</button>
+        <button id="overwriteRecBtn" class="active">上書き録音</button>
         <button id="recBtn" class="danger">● Rec</button>
         <button id="stopBtn">■ Stop</button>
-        <button id="clearTrackBtn">選択トラック削除</button>
+        <button id="clearTrackBtn">Track削除</button>
         <button id="clearAllBtn">全消去</button>
       </div>
     </div>
     <div class="card">
       <div class="row" style="justify-content: space-between;">
         <strong>素材解析</strong>
-        <div class="meta">選択トラックの素材から推定BPMと推定小節数を表示します。現在のBPMを既知値として使った小節数も表示します。</div>
+        <div class="meta">推定BPMと小節数を表示します。</div>
       </div>
       <div class="row" style="margin-top:10px; align-items:end;">
         <div style="min-width:260px; flex:1;">
@@ -472,7 +623,7 @@
         <div class="card">
           <div class="compact-card-title">
             <strong>クイック操作</strong>
-            <span class="mini-note">保存や書き出しは上部へ移動済みです</span>
+            <span class="mini-note"></span>
           </div>
           <div class="pin-actions">
             <button onclick="document.getElementById('toStartBtn').click()">|◀ 先頭へ</button>
@@ -483,14 +634,14 @@
     <div class="card">
       <div class="row" style="justify-content: space-between;">
         <strong>クリップ編集</strong>
-        <div class="meta">タイムラインをクリックでクリップ選択、ダブルクリックまたは分割ボタンでカーソル位置分割します。</div>
+        <div class="meta">クリックで選択、ダブルクリックか分割で区切ります。</div>
       </div>
       <div class="row" style="margin-top:10px;">
-        <button id="trimKeepBtn">選択クリップだけ残す</button>
+        <button id="trimKeepBtn">残す</button>
         <button id="trimDeleteBtn">選択クリップを削除</button>
-        <button id="splitBtn">カーソル位置で分割</button>
+        <button id="splitBtn">分割</button>
         <button id="duplicateBtn">選択クリップを複製</button>
-        <button id="resetSelectionBtn">選択解除</button>
+        <button id="resetSelectionBtn">解除</button>
       </div>
     </div>
 
@@ -500,7 +651,7 @@
     <div class="card">
       <div class="row" style="justify-content: space-between;">
         <strong>Tracks</strong>
-        <div class="meta">各トラックに音量、パン、リバーブ、ディレイを設定できます。トラック一覧だけをスクロール表示にしています。</div>
+        <div class="meta">各トラックを下でスクロール表示します。</div>
       </div>
       <div id="tracks" class="tracks"></div>
     </div>
@@ -878,14 +1029,14 @@
         tracksWrap.appendChild(el);
         trackEls.push(el);
       }
-      $('trimKeepBtn').textContent = '選択クリップだけ残す';
-      $('trimDeleteBtn').textContent = '選択クリップ削除';
-      $('splitBtn').textContent = 'カーソル位置で分割';
-      $('duplicateBtn').textContent = '選択クリップ複製';
+      $('trimKeepBtn').textContent = '残す';
+      $('trimDeleteBtn').textContent = '削除';
+      $('splitBtn').textContent = '分割';
+      $('duplicateBtn').textContent = '複製';
       const title = document.querySelector('.card strong');
       if (title) title.textContent = 'クリップ編集';
       const editMeta = document.querySelector('.card .meta');
-      if (editMeta) editMeta.textContent = 'タイムラインをクリックでクリップ選択・カーソル移動。ダブルクリックまたは分割ボタンでカーソル位置で分割します。';
+      if (editMeta) editMeta.textContent = 'タイムラインをクリックでクリップ選択・カーソル移動。ダブルクリックまたは分割ボタンで分割します。';
       renderTracks();
     }
 
@@ -1427,7 +1578,7 @@ updatePlayheads();
           }
 
           renderTracks();
-          setStatus(recordMode === 'append' ? '追加録音しました' : '録音し直しました');
+          setStatus(recordMode === 'append' ? '追加録音しました' : '上書き録音ました');
         } catch (err) {
           alert('録音データの処理に失敗しました: ' + err.message);
         }
@@ -1587,7 +1738,7 @@ updatePlayheads();
         renderTracks();
         setStatus('Split at cursor position');
       } else {
-        setStatus('カーソル位置で分割できません');
+        setStatus('分割できません');
       }
     }
 
@@ -1876,7 +2027,7 @@ updatePlayheads();
       rows.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
       projectsSelect.innerHTML = '';
       if (!rows.length) {
-        const opt = document.createElement('option'); opt.value = ''; opt.textContent = '保存済みプロジェクトなし'; projectsSelect.appendChild(opt);
+        const opt = document.createElement('option'); opt.value = ''; opt.textContent = '保存済みなし'; projectsSelect.appendChild(opt);
       } else {
         rows.forEach(row => {
           const opt = document.createElement('option');
