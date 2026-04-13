@@ -197,6 +197,7 @@
         <button id="countBtn" class="active">4 Count In</button>
         <button id="overdubBtn">⊕ Overdub</button>
         <button id="loopBtn">↻ Loop</button>
+        <button id="toStartBtn">|◀ Start</button>
         <button id="playBtn" class="primary">▶ Play</button>
         <button id="recBtn" class="danger">● Rec</button>
         <button id="stopBtn">■ Stop</button>
@@ -541,6 +542,8 @@
       if (!track.clips.some(c => c.id === track.selectedClipId)) {
         track.selectedClipId = track.clips[0]?.id || null;
       }
+      const total = getTimelineDisplayDuration(track);
+      state.timelineCursorTime = clamp(state.timelineCursorTime || 0, 0, total);
     }
 
     function setTrackSingleBuffer(track, buffer) {
@@ -650,6 +653,12 @@
       trackSelect.value = String(state.selectedTrack);
       $('loopBtn').classList.toggle('active', state.loop);
       updateTransportInfo();
+    }
+
+    function getTimelineDisplayDuration(track) {
+      const actual = getTrackDuration(track);
+      const planned = state.recordBars === 'inf' ? actual : recordDurationSeconds();
+      return Math.max(0.1, actual, planned, state.timelineCursorTime || 0);
     }
 
     function drawBufferSegment(ctx, buffer, x, w, h, color) {
@@ -1618,6 +1627,13 @@
       });
     }
 
+    function moveCursorToStart() {
+      state.timelineCursorTime = 0;
+      renderTracks();
+      positionText.textContent = '0.00';
+      setStatus('先頭に戻りました');
+    }
+
     function bindEvents() {
       $('micToggleBtn').onclick = async () => { try { if (mediaStream) closeMic(); else await openMic(); } catch (e) { alert('マイクの切り替えに失敗しました: ' + e.message); } };
       $('monitorBtn').onclick = () => toggleMonitor();
@@ -1625,6 +1641,7 @@
       $('countBtn').onclick = () => { state.countIn = !state.countIn; $('countBtn').classList.toggle('active', state.countIn); };
       $('overdubBtn').onclick = () => { state.overdub = !state.overdub; $('overdubBtn').classList.toggle('active', state.overdub); };
       $('loopBtn').onclick = () => { state.loop = !state.loop; $('loopBtn').classList.toggle('active', state.loop); setStatus(state.loop ? 'Loop ON' : 'Loop OFF'); };
+      $('toStartBtn').onclick = () => moveCursorToStart();
       $('playBtn').onclick = async () => { try { await startPlayback(); } catch (e) { alert('再生に失敗しました: ' + e.message); } };
       $('recBtn').onclick = async () => { try { await recordSelectedTrack(); } catch (e) { alert('録音に失敗しました: ' + e.message); } };
       $('stopBtn').onclick = () => stopTransport();
