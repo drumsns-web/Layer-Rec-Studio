@@ -626,15 +626,48 @@
       ctx.scale(dpr, dpr);
       ctx.fillStyle = '#0d1219';
       ctx.fillRect(0,0,cssW,cssH);
+
+      const track = tracks[index];
+      const total = Math.max(0.1, getTrackDuration(track));
+      const beatsTotal = Math.max(1, Math.ceil(total / beatDuration()));
+      const barsTotal = Math.max(1, Math.ceil(beatsTotal / 4));
+      const cursorX = (state.selectedTrack === index ? (state.timelineCursorTime / total) * cssW : null);
+
+      ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.textBaseline = 'top';
+
+      for (let beat = 0; beat <= beatsTotal; beat++) {
+        const t = beat * beatDuration();
+        const x = Math.min(cssW, (t / total) * cssW);
+        const isBar = beat % 4 === 0;
+
+        ctx.strokeStyle = isBar ? 'rgba(255, 209, 102, 0.42)' : 'rgba(76, 92, 124, 0.34)';
+        ctx.lineWidth = isBar ? 1.2 : 1;
+        ctx.beginPath();
+        ctx.moveTo(x + 0.5, isBar ? 14 : 22);
+        ctx.lineTo(x + 0.5, cssH);
+        ctx.stroke();
+
+        if (beat < beatsTotal) {
+          const labelX = x + 3;
+          if (isBar) {
+            const barNum = Math.floor(beat / 4) + 1;
+            ctx.fillStyle = 'rgba(255, 209, 102, 0.9)';
+            ctx.fillText(String(barNum), labelX, 2);
+          }
+          const beatInBar = (beat % 4) + 1;
+          ctx.fillStyle = 'rgba(153, 167, 194, 0.88)';
+          ctx.fillText(String(beatInBar), labelX, 12);
+        }
+      }
+
       ctx.strokeStyle = '#243045';
+      ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(0, cssH/2);
       ctx.lineTo(cssW, cssH/2);
       ctx.stroke();
 
-      const track = tracks[index];
-      const total = Math.max(0.1, getTrackDuration(track));
-      const cursorX = (state.selectedTrack === index ? (state.timelineCursorTime / total) * cssW : null);
       for (const clip of track.clips) {
         const x = (clip.startTime / total) * cssW;
         const w = Math.max(2, (clip.buffer.duration / total) * cssW);
@@ -643,11 +676,14 @@
         ctx.fillRect(x, 0, w, cssH);
         drawBufferSegment(ctx, clip.buffer, x, w, cssH, isSelected ? '#79dbff' : '#68b6d8');
         ctx.strokeStyle = isSelected ? '#7fdcff' : '#ff9f6e';
+        ctx.lineWidth = 1;
         ctx.strokeRect(x + 0.5, 0.5, Math.max(1, w - 1), cssH - 1);
       }
+
       if (cursorX != null && Number.isFinite(cursorX)) {
         const cx = Math.max(0, Math.min(cssW, cursorX));
         ctx.strokeStyle = '#ffd166';
+        ctx.lineWidth = 1.4;
         ctx.beginPath();
         ctx.moveTo(cx + 0.5, 0);
         ctx.lineTo(cx + 0.5, cssH);
