@@ -183,6 +183,10 @@
         <div class="label">自動測定</div>
         <button id="calibrateBtn">遅延を自動測定</button>
       </div>
+      <div>
+        <div class="label">素材解析</div>
+        <button id="analyzeTrackBtn">選択トラックを解析</button>
+      </div>
     </div>
 
     <div class="card">
@@ -198,6 +202,22 @@
         <button id="stopBtn">■ Stop</button>
         <button id="clearTrackBtn">選択トラック削除</button>
         <button id="clearAllBtn">全消去</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content: space-between;">
+        <strong>素材解析</strong>
+        <div class="meta">選択トラックの素材から推定BPMと推定小節数を表示します。現在のBPMを既知値として使った小節数も表示します。</div>
+      </div>
+      <div class="row" style="margin-top:10px; align-items:end;">
+        <div style="min-width:260px; flex:1;">
+          <div class="label">解析結果</div>
+          <div class="pill" id="analysisText">未解析</div>
+        </div>
+        <div class="row">
+          <button id="applyEstimatedBpmBtn">推定BPMを適用</button>
+          <button id="calcBarsFromCurrentBtn">現在BPMで小節再計算</button>
+        </div>
       </div>
     </div>
 
@@ -319,6 +339,9 @@
     const projectNameInput = $('projectNameInput');
     const projectsSelect = $('projectsSelect');
     const storageInfo = $('storageInfo');
+    const analysisText = $('analysisText');
+
+    let lastAnalysis = null;
     const beatDots = Array.from(document.querySelectorAll('[data-beat-dot]'));
 
     let visualMode = 'idle';
@@ -408,6 +431,41 @@
       transportInfo.textContent = `${loaded} tracks · ${state.bpm} BPM · rec ${recLabel}`;
       recLengthText.textContent = state.recordBars === 'inf' ? '∞ / 600.00' : recordDurationSeconds().toFixed(2);
       voicesText.textContent = String(activeVoiceCount);
+    }
+
+    function getPlannedTimelineDuration() {
+      return state.recordBars === 'inf' ? 0 : recordDurationSeconds();
+    }
+
+    function getTimelineDuration(track) {
+      return Math.max(0.1, getTrackDuration(track), getPlannedTimelineDuration());
+    }
+
+    function secondsPerBarAtBpm(bpm) {
+      return (60 / bpm) * 4;
+    }
+
+    function barsFromDurationAndBpm(durationSec, bpm) {
+      if (!Number.isFinite(durationSec) || !Number.isFinite(bpm) || bpm <= 0) return null;
+      return durationSec / secondsPerBarAtBpm(bpm);
+    }
+
+    function friendlyBarCount(value) {
+      if (!Number.isFinite(value)) return '不明';
+      const rounded = Math.round(value * 10) / 10;
+      const nearWhole = Math.abs(rounded - Math.round(rounded)) <= 0.08 ? Math.round(rounded) : rounded;
+      return `${nearWhole}小節`;
+    }
+
+    function nearestMusicalBarCount(value) {
+      const opts = [1,2,4,8,12,16,24,32,48,64];
+      let best = opts[0];
+      for (const n of opts) if (Math.abs(n - value) < Math.abs(best - value)) best = n;
+      return best;
+    }
+
+    function updateAnalysisText(text) {
+      if (analysisText) analysisText.textContent = text;
     }
 
     async function ensureAudio() {
@@ -523,7 +581,7 @@
             <div class="row">
               <button data-mute="${i}">Mute</button>
               <button data-solo="${i}">Solo</button>
-              <input data-import="${i}" type="file" accept="audio/*" />
+              <input data-import="${i}" type="file" accept="audio/*,video/*" />
             </div>
           </div>
           <div class="wave-wrap">
@@ -634,7 +692,7 @@
       ctx.fillRect(0,0,cssW,cssH);
 
       const track = tracks[index];
-      const total = Math.max(0.1, getTrackDuration(track));
+      const total = getTimelineDuration(track);
       const beatsTotal = Math.max(1, Math.ceil(total / beatDuration()));
       const barsTotal = Math.max(1, Math.ceil(beatsTotal / 4));
       const cursorX = (state.selectedTrack === index ? (state.timelineCursorTime / total) * cssW : null);
@@ -708,10 +766,11 @@
         }
         const rawElapsed = Math.max(0, audioCtx.currentTime - playStartedAt);
         const elapsed = state.loop && playbackCycleDuration > 0 ? (rawElapsed % playbackCycleDuration) : rawElapsed;
-        positionText.textContent = elapsed.toFixed(2);
+        const displayTime = (state.timelineCursorTime || 0) + elapsed;
+        positionText.textContent = displayTime.toFixed(2);
         updateBeatVisual();
         tracks.forEach((track, i) => {
-          const total = Math.max(0.1, getTrackDuration(track));
+          const total = getTimelineDuration(track);
           const ratio = clamp(elapsed / total, 0, 1);
           trackEls[i].querySelector('.playhead').style.left = `${ratio * 100}%`;
         });
@@ -785,17 +844,26 @@
       return { input: inputGain, output: out };
     }
 
-    function playTrack(track, when = 0, offline = null) {
+    function playTrack(track, when = 0, offline = null, startOffset = 0) {
       const ctx = offline || audioCtx;
       const bus = createTrackBus(ctx, track);
       bus.output.connect(offline ? ctx.destination : masterGain);
       for (const clip of track.clips) {
+        const clipStart = clip.startTime;
+        const clipEnd = clip.startTime + clip.buffer.duration;
+        if (clipEnd <= startOffset) continue;
+
         const chain = createClipChain(ctx, clip);
         chain.output.connect(bus.input);
         const source = ctx.createBufferSource();
         source.buffer = clip.buffer;
         source.connect(chain.input);
-        source.start(when + clip.startTime);
+
+        const offsetInClip = Math.max(0, startOffset - clipStart);
+        const scheduledWhen = when + Math.max(0, clipStart - startOffset);
+        const playDuration = Math.max(0.01, clip.buffer.duration - offsetInClip);
+
+        source.start(scheduledWhen, offsetInClip, playDuration);
         if (!offline) {
           activeVoiceCount += 1;
           voicesText.textContent = String(activeVoiceCount);
@@ -930,7 +998,10 @@
       const soloOn = hasSolo();
       const playable = tracks.filter(t => t.clips.length && !t.mute && (!soloOn || t.solo));
       if (!playable.length) { setStatus('No clips'); return; }
-      const duration = Math.max(0.1, ...playable.map(getTrackDuration));
+
+      const fullDuration = Math.max(0.1, ...playable.map(getTrackDuration));
+      const startOffset = clamp(state.timelineCursorTime || 0, 0, fullDuration);
+      const duration = Math.max(0.1, fullDuration - startOffset);
       playbackCycleDuration = duration;
       isPlaying = true;
       playStartedAt = audioCtx.currentTime + 0.04;
@@ -941,7 +1012,7 @@
           const beats = Math.max(1, Math.ceil(duration / beatDuration()));
           scheduleMetronome(cycleStart, beats);
         }
-        playable.forEach(track => playTrack(track, cycleStart));
+        playable.forEach(track => playTrack(track, cycleStart, null, startOffset));
         if (state.loop) {
           setTimeout(() => scheduleCycle(cycleStart + duration), Math.max(10, duration * 1000 - 30));
         } else {
@@ -1095,7 +1166,7 @@
     }
 
     function clipAtRatio(track, ratio) {
-      const total = Math.max(0.1, getTrackDuration(track));
+      const total = getTimelineDuration(track);
       const time = ratio * total;
       return track.clips.find(clip => time >= clip.startTime && time <= clip.startTime + clip.buffer.duration + 1e-6) || null;
     }
@@ -1170,7 +1241,7 @@
 
     function splitAtTimelineCursor(index) {
       const track = tracks[index];
-      const total = Math.max(0.1, getTrackDuration(track));
+      const total = getTimelineDuration(track);
       const time = clamp(state.timelineCursorTime, 0, total);
       const ok = splitClipAtTime(track, time);
       if (ok) {
@@ -1181,15 +1252,118 @@
       }
     }
 
-    async function importAudioToTrack(file, index) {
+    async function decodeMediaFileToBuffer(file) {
       await ensureAudio();
       const arr = await file.arrayBuffer();
-      const buffer = await audioCtx.decodeAudioData(arr.slice(0));
+      try {
+        return await audioCtx.decodeAudioData(arr.slice(0));
+      } catch (err) {
+        throw new Error('この動画・音声形式はブラウザで音声抽出できない可能性があります');
+      }
+    }
+
+    async function importAudioToTrack(file, index) {
+      await ensureAudio();
+      const buffer = await decodeMediaFileToBuffer(file);
       setTrackSingleBuffer(tracks[index], buffer);
+      state.selectedTrack = index;
+      lastAnalysis = null;
+      updateAnalysisText(`Track ${index + 1} 読み込み済み · 長さ ${buffer.duration.toFixed(2)}s`);
       renderTracks();
       setStatus(`Track ${index + 1} imported`);
     }
 
+
+    function monoFromBuffer(buffer) {
+      const channels = buffer.numberOfChannels;
+      const length = buffer.length;
+      const out = new Float32Array(length);
+      for (let ch = 0; ch < channels; ch++) {
+        const data = buffer.getChannelData(ch);
+        for (let i = 0; i < length; i++) out[i] += data[i] / channels;
+      }
+      return out;
+    }
+
+    function estimateBpmFromBuffer(buffer) {
+      const mono = monoFromBuffer(buffer);
+      const sr = buffer.sampleRate;
+      const hop = 1024;
+      const env = [];
+      let prevEnergy = 0;
+      for (let i = 0; i < mono.length; i += hop) {
+        let energy = 0;
+        const end = Math.min(i + hop, mono.length);
+        for (let j = i; j < end; j++) {
+          const v = mono[j];
+          energy += v * v;
+        }
+        energy = Math.sqrt(energy / Math.max(1, end - i));
+        env.push(Math.max(0, energy - prevEnergy));
+        prevEnergy = energy * 0.8 + prevEnergy * 0.2;
+      }
+
+      const minBpm = 60, maxBpm = 200;
+      const minLag = Math.floor((60 / maxBpm) * sr / hop);
+      const maxLag = Math.floor((60 / minBpm) * sr / hop);
+      let bestLag = 0;
+      let bestScore = -Infinity;
+
+      for (let lag = minLag; lag <= maxLag; lag++) {
+        let score = 0;
+        for (let i = lag; i < env.length; i++) score += env[i] * env[i - lag];
+        if (score > bestScore) {
+          bestScore = score;
+          bestLag = lag;
+        }
+      }
+
+      if (!bestLag || bestScore <= 0) return null;
+      let bpm = 60 * sr / (bestLag * hop);
+      while (bpm < 80) bpm *= 2;
+      while (bpm > 160) bpm /= 2;
+      return Math.round(bpm * 10) / 10;
+    }
+
+    async function analyzeSelectedTrack(useCurrentOnly = false) {
+      await ensureAudio();
+      const track = tracks[state.selectedTrack];
+      const clip = getSelectedClip(track) || track.clips[0];
+      if (!clip) throw new Error('解析する素材がありません');
+
+      const duration = clip.buffer.duration;
+      const currentBars = barsFromDurationAndBpm(duration, state.bpm);
+      let estimatedBpm = null;
+      let estimatedBars = null;
+
+      if (!useCurrentOnly) {
+        estimatedBpm = estimateBpmFromBuffer(clip.buffer);
+        if (estimatedBpm) estimatedBars = barsFromDurationAndBpm(duration, estimatedBpm);
+      }
+
+      const nearestByCurrent = currentBars ? nearestMusicalBarCount(currentBars) : null;
+      const nearestByEstimated = estimatedBars ? nearestMusicalBarCount(estimatedBars) : null;
+
+      lastAnalysis = {
+        duration,
+        currentBpm: state.bpm,
+        currentBars,
+        nearestByCurrent,
+        estimatedBpm,
+        estimatedBars,
+        nearestByEstimated,
+      };
+
+      const parts = [`長さ ${duration.toFixed(2)}s`];
+      parts.push(`現在BPM ${state.bpm} → 約${friendlyBarCount(currentBars)}${nearestByCurrent ? `（近い候補 ${nearestByCurrent}小節）` : ''}`);
+      if (estimatedBpm) {
+        parts.push(`推定BPM ${estimatedBpm} → 約${friendlyBarCount(estimatedBars)}${nearestByEstimated ? `（近い候補 ${nearestByEstimated}小節）` : ''}`);
+      } else if (!useCurrentOnly) {
+        parts.push('推定BPMは判定できませんでした');
+      }
+      updateAnalysisText(parts.join(' / '));
+      return lastAnalysis;
+    }
     async function renderMixdownBuffer() {
       await ensureAudio();
       const selected = tracks.filter(t => t.clips.length && !t.mute && (!hasSolo() || t.solo));
@@ -1316,6 +1490,8 @@
         normalizeTrackClips(t);
       }
       renderTracks();
+      lastAnalysis = null;
+      updateAnalysisText('未解析');
       setStatus('Project loaded');
     }
 
@@ -1421,7 +1597,7 @@
         state.selectedTrack = index;
         const ratio = pointerRatio(canvas, e.clientX);
         const track = tracks[index];
-        const total = Math.max(0.1, getTrackDuration(track));
+        const total = getTimelineDuration(track);
         state.timelineCursorTime = ratio * total;
         const clip = clipAtRatio(track, ratio);
         track.selectedClipId = clip?.id || null;
@@ -1435,7 +1611,7 @@
         state.selectedTrack = index;
         const ratio = pointerRatio(canvas, e.clientX);
         const track = tracks[index];
-        const total = Math.max(0.1, getTrackDuration(track));
+        const total = getTimelineDuration(track);
         const ok = splitClipAtTime(track, ratio * total);
         renderTracks();
         setStatus(ok ? 'Split at timeline position' : 'Splitできない位置です');
@@ -1466,9 +1642,12 @@
       $('deleteIdbBtn').onclick = async () => { try { await deleteProjectFromDB(); } catch (e) { alert('削除に失敗しました: ' + e.message); } };
       $('exportWavBtn').onclick = async () => { try { const mixed = await renderMixdownBuffer(); downloadBlob(audioBufferToWav(mixed), `layerrec-mix-${Date.now()}.wav`); setStatus('WAV exported'); } catch (e) { alert('WAV書き出しに失敗しました: ' + e.message); } };
       $('calibrateBtn').onclick = async () => { try { await autoCalibrateLatency(); } catch (e) { alert('自動測定に失敗しました: ' + e.message); } };
+      $('analyzeTrackBtn').onclick = async () => { try { await analyzeSelectedTrack(false); } catch (e) { alert('素材解析に失敗しました: ' + e.message); } };
+      $('applyEstimatedBpmBtn').onclick = async () => { try { const result = lastAnalysis || await analyzeSelectedTrack(false); if (!result?.estimatedBpm) throw new Error('推定BPMを取得できませんでした'); state.bpm = clamp(Number(result.estimatedBpm), 40, 240); bpmInput.value = String(state.bpm); updateTransportInfo(); renderTracks(); updateAnalysisText(`${analysisText.textContent} / 推定BPMを適用しました`); } catch (e) { alert('推定BPM適用に失敗しました: ' + e.message); } };
+      $('calcBarsFromCurrentBtn').onclick = async () => { try { await analyzeSelectedTrack(true); } catch (e) { alert('小節再計算に失敗しました: ' + e.message); } };
 
-      bpmInput.oninput = () => { state.bpm = clamp(Number(bpmInput.value || 120), 40, 240); updateTransportInfo(); };
-      recordBarsInput.onchange = () => { state.recordBars = recordBarsInput.value; updateTransportInfo(); };
+      bpmInput.oninput = () => { state.bpm = clamp(Number(bpmInput.value || 120), 40, 240); updateTransportInfo(); renderTracks(); };
+      recordBarsInput.onchange = () => { state.recordBars = recordBarsInput.value; updateTransportInfo(); renderTracks(); };
       trackSelect.onchange = () => { state.selectedTrack = Number(trackSelect.value || 0); renderTracks(); };
       masterVol.oninput = () => { state.masterVolume = Number(masterVol.value); if (masterGain) masterGain.gain.value = state.masterVolume; };
       clickVol.oninput = () => { state.clickVolume = Number(clickVol.value); if (clickGain) clickGain.gain.value = state.clickVolume; };
