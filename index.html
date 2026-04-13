@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>LayerRec Studio</title>
+  <title>Layer Rec Studio</title>
   <style>
     :root {
       --bg: #10131a;
@@ -85,6 +85,10 @@
     .playhead { width: 2px; background: #7bf2b5; left: 0; opacity: .85; }
     .sel { background: rgba(85,208,255,.18); border-left: 1px solid rgba(85,208,255,.6); border-right: 1px solid rgba(85,208,255,.6); }
     .footer { color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .beat-visual { display:flex; gap:8px; align-items:center; }
+    .beat-dot { width:14px; height:14px; border-radius:999px; background:#243045; border:1px solid #41506d; box-shadow: inset 0 0 0 1px rgba(255,255,255,.03); }
+    .beat-dot.active { background: var(--warn); border-color:#ffdf8f; box-shadow: 0 0 0 3px rgba(255,211,111,.16); }
+    .beat-dot.countin { background: var(--accent); border-color:#93e6ff; box-shadow: 0 0 0 3px rgba(85,208,255,.16); }
     @media (max-width: 980px) {
       .grid { grid-template-columns: repeat(3, minmax(120px, 1fr)); }
       .track-top { grid-template-columns: 54px 1fr; }
@@ -100,7 +104,7 @@
 </head>
 <body>
   <div class="app">
-    <h1>LAYERREC STUDIO</h1>
+    <h1>Layer Rec Studio</h1>
     <div class="sub">多重録音の試作版です。マイクON/OFF、1/2/4/8/16小節または無制限録音、各トラック音量、リバーブ、ディレイ、WAV書き出し、IndexedDB保存に対応しています。</div>
 
     <div class="card sticky">
@@ -114,6 +118,13 @@
           <div class="pill">Rec <span id="recLengthText">8.00</span>s</div>
           <div class="pill">Mic <span id="micText">OFF</span></div>
           <div class="pill">Voices <span id="voicesText">0</span></div>
+          <div class="pill">Beat <span id="beatText">—</span></div>
+          <div class="beat-visual" id="beatVisual">
+            <span class="beat-dot" data-beat-dot="0"></span>
+            <span class="beat-dot" data-beat-dot="1"></span>
+            <span class="beat-dot" data-beat-dot="2"></span>
+            <span class="beat-dot" data-beat-dot="3"></span>
+          </div>
         </div>
       </div>
     </div>
@@ -263,6 +274,9 @@
     let recordStopTimer = null;
     let nextClipId = 1;
     let playbackCycleDuration = 0;
+    let visualMode = 'idle';
+    let visualStartAt = 0;
+    let visualCountInBeats = 0;
 
     const tracks = [];
     const trackEls = [];
@@ -281,6 +295,8 @@
     const recLengthText = $('recLengthText');
     const micText = $('micText');
     const voicesText = $('voicesText');
+    const beatText = $('beatText');
+    const beatDots = Array.from(document.querySelectorAll('[data-beat-dot]'));
     const projectNameInput = $('projectNameInput');
     const projectsSelect = $('projectsSelect');
     const storageInfo = $('storageInfo');
@@ -291,6 +307,21 @@
     function recordDurationSeconds() { return state.recordBars === 'inf' ? MAX_REC_SECONDS : barsToSeconds(state.recordBars); }
     function hasSolo() { return tracks.some(t => t.solo); }
     function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+    function setBeatVisual(beatIndex = -1, mode = 'idle') {
+      beatDots.forEach((dot, i) => {
+        dot.classList.toggle('active', i === beatIndex);
+        dot.classList.toggle('countin', mode === 'countin' && i === beatIndex);
+      });
+      beatText.textContent = beatIndex >= 0 ? `${beatIndex + 1}/4` : '—';
+    }
+
+    function resetBeatVisual() {
+      visualMode = 'idle';
+      visualStartAt = 0;
+      visualCountInBeats = 0;
+      setBeatVisual(-1, 'idle');
+    }
 
     function updateTransportInfo() {
       const loaded = tracks.filter(t => t.clips.length).length;
@@ -530,6 +561,23 @@
 
       const track = tracks[index];
       const total = Math.max(0.1, getTrackDuration(track));
+      const barDur = 4 * beatDuration();
+      const barCount = Math.max(1, Math.ceil(total / barDur));
+      ctx.font = '10px sans-serif';
+      for (let bar = 0; bar <= barCount; bar++) {
+        const t = Math.min(total, bar * barDur);
+        const xBar = (t / total) * cssW;
+        ctx.strokeStyle = bar % 4 === 0 ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.09)';
+        ctx.beginPath();
+        ctx.moveTo(xBar + 0.5, 0);
+        ctx.lineTo(xBar + 0.5, cssH);
+        ctx.stroke();
+        if (bar < barCount) {
+          ctx.fillStyle = 'rgba(255,255,255,0.45)';
+          ctx.fillText(String(bar + 1), Math.min(cssW - 10, xBar + 4), 11);
+        }
+      }
+
       const cursorX = (state.selectedTrack === index ? (state.timelineCursorTime / total) * cssW : null);
       for (const clip of track.clips) {
         const x = (clip.startTime / total) * cssW;
@@ -557,9 +605,22 @@
         if (!isPlaying) {
           trackEls.forEach(el => el.querySelector('.playhead').style.left = '0%');
           positionText.textContent = '0.00';
+          resetBeatVisual();
           return;
         }
-        const rawElapsed = Math.max(0, audioCtx.currentTime - playStartedAt);
+        const now = audioCtx.currentTime;
+        let visualBeat = -1;
+        let visualBeatMode = 'play';
+        if (visualMode === 'countin' && now < playStartedAt) {
+          const countElapsed = Math.max(0, now - visualStartAt);
+          visualBeat = Math.floor(countElapsed / beatDuration()) % 4;
+          visualBeatMode = 'countin';
+        } else {
+          const playElapsedForBeat = Math.max(0, now - playStartedAt);
+          visualBeat = Math.floor(playElapsedForBeat / beatDuration()) % 4;
+        }
+        setBeatVisual(visualBeat, visualBeatMode);
+        const rawElapsed = Math.max(0, now - playStartedAt);
         const elapsed = state.loop && playbackCycleDuration > 0 ? (rawElapsed % playbackCycleDuration) : rawElapsed;
         positionText.textContent = elapsed.toFixed(2);
         tracks.forEach((track, i) => {
@@ -687,6 +748,9 @@
       playbackCycleDuration = duration;
       isPlaying = true;
       playStartedAt = audioCtx.currentTime + 0.04;
+      visualMode = 'play';
+      visualStartAt = playStartedAt;
+      visualCountInBeats = 0;
 
       const scheduleCycle = (cycleStart) => {
         if (!isPlaying) return;
@@ -720,6 +784,7 @@
       }
       trackEls.forEach(el => el.querySelector('.playhead').style.left = '0%');
       positionText.textContent = '0.00';
+      resetBeatVisual();
       setStatus('Stopped');
     }
 
@@ -809,6 +874,9 @@
       const delayMs = Math.max(0, (startAt - audioCtx.currentTime) * 1000);
       isPlaying = true;
       playStartedAt = startAt;
+      visualMode = state.countIn ? 'countin' : 'record';
+      visualStartAt = state.countIn ? (startAt - 4 * beatDuration()) : startAt;
+      visualCountInBeats = state.countIn ? 4 : 0;
       setStatus(state.countIn ? 'Count In' : 'Recording');
       updatePlayheads();
 
@@ -1255,6 +1323,7 @@
       setupTracks();
       bindEvents();
       bindTimelineClick();
+      resetBeatVisual();
       await initDB().catch(() => null);
       await refreshProjectList().catch(() => null);
       updateTransportInfo();
