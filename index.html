@@ -85,6 +85,79 @@
     .playhead { width: 2px; background: #7bf2b5; left: 0; opacity: .85; }
     .sel { background: rgba(85,208,255,.18); border-left: 1px solid rgba(85,208,255,.6); border-right: 1px solid rgba(85,208,255,.6); }
     .footer { color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .app-shell {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 12px;
+      min-height: 100vh;
+    }
+    .top-actions.sticky {
+      top: 0;
+      z-index: 50;
+    }
+    .top-actions .card,
+    .workspace .card {
+      margin-bottom: 0;
+    }
+    .workspace {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+    .side-panel {
+      display: grid;
+      gap: 12px;
+      position: sticky;
+      top: 170px;
+      max-height: calc(100vh - 190px);
+      overflow: auto;
+      padding-right: 4px;
+    }
+    .tracks-panel {
+      min-width: 0;
+    }
+    .tracks-scroller {
+      max-height: calc(100vh - 190px);
+      overflow: auto;
+      padding-right: 4px;
+    }
+    .compact-card-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .mini-note {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .pin-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .pin-actions button {
+      min-height: 40px;
+    }
+    @media (max-width: 1100px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+      .side-panel {
+        position: static;
+        max-height: none;
+        overflow: visible;
+      }
+      .tracks-scroller {
+        max-height: none;
+        overflow: visible;
+      }
+    }
+
 
     .beat-indicator {
       display: flex; gap: 10px; align-items: center; justify-content: center;
@@ -122,11 +195,11 @@
   </style>
 </head>
 <body>
-  <div class="app">
+  <div class="app"><div class="app-shell">
     <h1>LAYER REC STUDIO</h1>
     <div class="sub">多重録音の試作版です。マイクON/OFF、1/2/4/8/16小節または無制限録音、各トラック音量、リバーブ、ディレイ、WAV書き出し、IndexedDB保存に対応しています。</div>
 
-    <div class="card sticky">
+    <div class="top-actions sticky"><div class="card">
       <div class="transport">
         <div>
           <div class="pill" id="statusText">Ready</div>
@@ -145,7 +218,7 @@
         <div class="beat-dot" data-beat-dot="2"></div>
         <div class="beat-dot" data-beat-dot="3"></div>
       </div>
-    </div>
+    </div></div>
 
     <div class="card grid">
       <div>
@@ -189,6 +262,33 @@
       </div>
     </div>
 
+
+    <div class="card">
+      <div class="row" style="align-items:end;">
+        <div style="min-width:220px; flex:1;">
+          <div class="label">保存名</div>
+          <input id="projectNameInput" type="text" placeholder="例: chorus-take-01" />
+        </div>
+        <div class="row">
+          <button id="saveIdbBtn" class="good">💾 保存</button>
+          <button id="loadIdbBtn">↺ 読込</button>
+          <button id="deleteIdbBtn" class="danger">✕ 削除</button>
+          <button id="exportWavBtn" class="good">↓ WAV</button>
+          <button id="saveProjectBtn">↗ JSON</button>
+          <label>
+            <input id="loadProjectInput" type="file" accept="application/json" />
+          </label>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px; align-items:end;">
+        <div style="min-width:240px; flex:1;">
+          <div class="label">保存済みプロジェクト</div>
+          <select id="projectsSelect"></select>
+        </div>
+        <div class="meta" id="storageInfo">IndexedDB: 初期化前</div>
+      </div>
+    </div>
+
     <div class="card">
       <div class="row">
         <button id="micToggleBtn">MIC ON</button>
@@ -224,6 +324,19 @@
       </div>
     </div>
 
+    <div class="workspace">
+      <div class="side-panel">
+        <div class="card">
+          <div class="compact-card-title">
+            <strong>クイック操作</strong>
+            <span class="mini-note">保存や書き出しは上部へ移動済みです</span>
+          </div>
+          <div class="pin-actions">
+            <button onclick="document.getElementById('toStartBtn').click()">|◀ 先頭へ</button>
+            <button onclick="document.getElementById('saveIdbBtn').click()">💾 保存</button>
+            <button onclick="document.getElementById('exportWavBtn').click()">↓ WAV</button>
+          </div>
+        </div>
     <div class="card">
       <div class="row" style="justify-content: space-between;">
         <strong>クリップ編集</strong>
@@ -238,47 +351,28 @@
       </div>
     </div>
 
+      </div>
+      <div class="tracks-panel">
+        <div class="tracks-scroller">
     <div class="card">
       <div class="row" style="justify-content: space-between;">
         <strong>Tracks</strong>
-        <div class="meta">各トラックに音量、パン、リバーブ、ディレイを設定できます。波形ドラッグで選択範囲を指定できます。</div>
+        <div class="meta">各トラックに音量、パン、リバーブ、ディレイを設定できます。トラック一覧だけをスクロール表示にしています。</div>
       </div>
       <div id="tracks" class="tracks"></div>
     </div>
 
-    <div class="card">
-      <div class="row" style="align-items:end;">
-        <div style="min-width:220px; flex:1;">
-          <div class="label">保存名</div>
-          <input id="projectNameInput" type="text" placeholder="例: chorus-take-01" />
+
         </div>
-        <div class="row">
-          <button id="saveIdbBtn" class="good">💾 保存</button>
-          <button id="loadIdbBtn">↺ 読込</button>
-          <button id="deleteIdbBtn" class="danger">✕ 削除</button>
-          <button id="exportWavBtn" class="good">↓ WAV</button>
-          <button id="saveProjectBtn">↗ JSON</button>
-          <label>
-            <input id="loadProjectInput" type="file" accept="application/json" />
-          </label>
-        </div>
-      </div>
-      <div class="row" style="margin-top:10px; align-items:end;">
-        <div style="min-width:240px; flex:1;">
-          <div class="label">保存済みプロジェクト</div>
-          <select id="projectsSelect"></select>
-        </div>
-        <div class="meta" id="storageInfo">IndexedDB: 初期化前</div>
       </div>
     </div>
-
     <div class="card footer">
       <div>・無制限録音はブラウザ負荷を抑えるため最大10分までです。</div>
       <div>・同時発音数は「トラック数 × エフェクト数」に依存します。10トラック程度なら多くのPCで実用域ですが、iPhoneは負荷が上がる可能性があります。</div>
       <div>・リバーブは軽量インパルス、ディレイはフィードバック付きディレイです。</div>
       <div>・遅延自動測定は本体スピーカー使用時に精度が出やすいです。Bluetoothやイヤホンでは精度が落ちる可能性があります。</div>
     </div>
-  </div>
+  </div></div>
 
   
   <script>
