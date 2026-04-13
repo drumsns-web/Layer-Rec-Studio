@@ -383,7 +383,8 @@
       }
 
       if (visualDuration > 0 && !visualLoop && elapsed >= visualDuration) {
-        clearBeatDots();
+        const lastBeatIndex = Math.max(0, Math.min(3, Math.floor((Math.max(0, visualDuration) - 0.0001) / beatDuration()) % 4));
+        setBeatDot(lastBeatIndex, visualMode === 'countin' ? 'countin' : 'play');
         return;
       }
 
@@ -933,6 +934,7 @@
         isRecording = false;
         isPlaying = false;
         stopAllSources();
+        stopBeatVisual();
       }, Math.max(100, delayMs + limitSec * 1000));
     }
 
