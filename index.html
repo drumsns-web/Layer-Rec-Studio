@@ -833,6 +833,65 @@
       }
     }
 
+
+    .mode-bar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    .mode-tabs, .track-visibility-tools {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .mode-tab.active {
+      background: #1d418f;
+      border-color: #2b63ff;
+      outline: 2px solid var(--accent);
+    }
+    .track-counter {
+      font-size: 12px;
+      color: var(--muted);
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #131923;
+    }
+    .mode-panel { display: none; }
+    body.mode-record [data-panel-record],
+    body.mode-edit [data-panel-edit],
+    body.mode-mix [data-panel-mix],
+    body.mode-record [data-panel-shared],
+    body.mode-edit [data-panel-shared],
+    body.mode-mix [data-panel-shared] { display: block; }
+    body.mode-record .track-body,
+    body.mode-record .track-fx { display: none; }
+    body.mode-edit .track-body { display: none; }
+    body.mode-edit .track-fx { display: none; }
+    body.mode-edit .track:not(.selected) .wave-wrap { opacity: .92; }
+    body.mode-mix .wave-wrap { display: none; }
+    body.mode-mix .track { gap: 8px; }
+    .track.tap-selectable { cursor: pointer; }
+    .track.selected { box-shadow: 0 0 0 2px rgba(85,208,255,.25) inset; }
+    .track-header-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--muted);
+      margin-left: 8px;
+    }
+    .hidden-track { display: none !important; }
+    @media (max-width: 760px) {
+      .mode-bar { align-items: stretch; }
+      .mode-tabs, .track-visibility-tools { width: 100%; }
+      .mode-tabs button, .track-visibility-tools button { flex: 1; }
+      .track-counter { width: 100%; text-align: center; }
+    }
+
 </style>
 </head>
 <body>
@@ -918,7 +977,7 @@
           </div>
         </div>
 
-        <div class="toolbar-card">
+        <div class="toolbar-card mode-panel" data-panel-record>
           <div class="toolbar-mini">
             <div class="toolbar-block">
               <div class="toolbar-title">保存 / 書き出し</div>
@@ -975,9 +1034,25 @@
       </div>
     </div>
 
+
+    <div class="card">
+      <div class="mode-bar">
+        <div class="mode-tabs">
+          <button class="mode-tab active" data-mode-btn="record">録音</button>
+          <button class="mode-tab" data-mode-btn="edit">編集</button>
+          <button class="mode-tab" data-mode-btn="mix">ミキサー</button>
+        </div>
+        <div class="track-visibility-tools">
+          <button id="removeTrackBtn">− Track</button>
+          <div class="track-counter">表示トラック <span id="visibleTrackCountText">2</span> / 10</div>
+          <button id="addTrackBtn">＋ Track</button>
+        </div>
+      </div>
+    </div>
+
     <div class="workspace">
       <div class="side-panel">
-        <div class="card">
+        <div class="card mode-panel" data-panel-record>
           <div class="compact-card-title">
             <strong>クイック操作</strong>
             <span class="mini-note"></span>
@@ -988,7 +1063,7 @@
             <button onclick="document.getElementById('exportWavBtn').click()">↓ WAV</button>
           </div>
         </div>
-    <div class="card">
+    <div class="card mode-panel" data-panel-edit>
       <div class="row" style="justify-content: space-between;">
         <strong>クリップ編集</strong>
         <div class="meta">クリックで選択、ダブルクリックか分割で区切ります。</div>
@@ -1005,9 +1080,9 @@
       </div>
       <div class="tracks-panel">
         <div class="tracks-scroller">
-    <div class="card">
+    <div class="card mode-panel" data-panel-shared>
       <div class="row" style="justify-content: space-between;">
-        <strong>Tracks</strong>
+        <strong>Tracks</strong><span class="track-header-badge">タップで選択</span>
         <div class="meta">各トラックを下でスクロール表示します。</div>
       </div>
       <div id="tracks" class="tracks"></div>
@@ -1028,6 +1103,7 @@
   
   <script>
     const TRACK_COUNT = 10;
+    const MIN_VISIBLE_TRACKS = 1;
     const DB_NAME = 'layerrecStudioDB';
     const DB_VERSION = 2;
     const STORE_PROJECTS = 'projects';
@@ -1046,6 +1122,8 @@
       clickVolume: 0.25,
       latencyMs: 120,
       timelineCursorTime: 0,
+      viewMode: 'record',
+      visibleTrackCount: 2,
     };
 
     let audioCtx = null;
@@ -1096,6 +1174,10 @@
     const projectsSelect = $('projectsSelect');
     const storageInfo = $('storageInfo');
     const analysisText = $('analysisText');
+    const modeButtons = Array.from(document.querySelectorAll('[data-mode-btn]'));
+    const addTrackBtn = $('addTrackBtn');
+    const removeTrackBtn = $('removeTrackBtn');
+    const visibleTrackCountText = $('visibleTrackCountText');
 
     let lastAnalysis = null;
     const beatDots = Array.from(document.querySelectorAll('[data-beat-dot]'));
@@ -1354,13 +1436,10 @@
       for (let i = 0; i < TRACK_COUNT; i++) {
         const track = createTrack(i);
         tracks.push(track);
-        const opt = document.createElement('option');
-        opt.value = String(i);
-        opt.textContent = `Track ${i + 1}`;
-        trackSelect.appendChild(opt);
 
         const el = document.createElement('div');
-        el.className = 'track';
+        el.className = 'track tap-selectable';
+        el.dataset.trackCard = String(i);
         el.innerHTML = `
           <div class="track-top">
             <button class="select-btn" data-select="${i}">${i + 1}</button>
@@ -1401,6 +1480,18 @@
       renderTracks();
     }
 
+    function updateModeUi() {
+      document.body.classList.remove('mode-record', 'mode-edit', 'mode-mix');
+      document.body.classList.add(`mode-${state.viewMode}`);
+      modeButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.modeBtn === state.viewMode));
+    }
+
+    function setViewMode(mode) {
+      if (!['record', 'edit', 'mix'].includes(mode)) return;
+      state.viewMode = mode;
+      updateModeUi();
+    }
+
     function formatTrackMeta(track) {
       if (!track.clips.length) return 'Empty';
       const dur = getTrackDuration(track).toFixed(2);
@@ -1414,10 +1505,15 @@
     }
 
     function renderTracks() {
+      const visibleCount = clamp(Number(state.visibleTrackCount || 0), MIN_VISIBLE_TRACKS, TRACK_COUNT);
+      state.visibleTrackCount = visibleCount;
+      if (state.selectedTrack >= visibleCount) state.selectedTrack = visibleCount - 1;
       for (let i = 0; i < TRACK_COUNT; i++) {
         const el = trackEls[i];
         const track = tracks[i];
-        el.classList.toggle('selected', i === state.selectedTrack);
+        const isVisible = i < visibleCount;
+        el.classList.toggle('hidden-track', !isVisible);
+        el.classList.toggle('selected', i === state.selectedTrack && isVisible);
         const [muteBtn, soloBtn] = el.querySelectorAll('[data-mute], [data-solo]');
         if (muteBtn) muteBtn.classList.toggle('active', track.mute);
         if (soloBtn) soloBtn.classList.toggle('active', track.solo);
@@ -1437,9 +1533,20 @@
         const fbv = el.querySelector('[data-feedbackv]'); if (fbv) fbv.textContent = `${Math.round((selectedClip ? selectedClip.delayFeedback : 0.2) * 100)}%`;
         drawWaveform(i);
       }
+      trackSelect.innerHTML = '';
+      for (let i = 0; i < visibleCount; i++) {
+        const opt = document.createElement('option');
+        opt.value = String(i);
+        opt.textContent = tracks[i]?.name || `Track ${i + 1}`;
+        trackSelect.appendChild(opt);
+      }
       trackSelect.value = String(state.selectedTrack);
+      if (visibleTrackCountText) visibleTrackCountText.textContent = String(visibleCount);
+      if (addTrackBtn) addTrackBtn.disabled = visibleCount >= TRACK_COUNT;
+      if (removeTrackBtn) removeTrackBtn.disabled = visibleCount <= MIN_VISIBLE_TRACKS;
       $('loopBtn').classList.toggle('active', state.loop);
       updateTransportInfo();
+      updateModeUi();
     }
 
     function getTimelineDisplayDuration(track) {
@@ -1708,6 +1815,7 @@
       stopScheduledClicks();
       stopBeatVisual();
       updateMetroButtonUi();
+      updateModeUi();
       if (!isPlaying && !isRecording) {
         positionText.textContent = Number(state.timelineCursorTime || 0).toFixed(2);
         setStatus('Stopped');
@@ -1751,6 +1859,7 @@
       scheduler();
       metronomeSchedulerTimer = setInterval(scheduler, 80);
       updateMetroButtonUi();
+      updateModeUi();
       setStatus('Metronome');
     }
 
@@ -2351,6 +2460,8 @@ updatePlayheads();
         masterVolume: state.masterVolume,
         clickVolume: state.clickVolume,
         latencyMs: state.latencyMs,
+        visibleTrackCount: state.visibleTrackCount,
+        viewMode: state.viewMode,
         tracks: await Promise.all(tracks.map(async (track) => ({
           name: track.name,
           mute: track.mute,
@@ -2378,9 +2489,12 @@ updatePlayheads();
       state.masterVolume = Number(data.masterVolume ?? 1);
       state.clickVolume = Number(data.clickVolume ?? 0.25);
       state.latencyMs = Number(data.latencyMs ?? 120);
+      state.visibleTrackCount = clamp(Number(data.visibleTrackCount ?? 2), MIN_VISIBLE_TRACKS, TRACK_COUNT);
+      state.viewMode = ['record','edit','mix'].includes(data.viewMode) ? data.viewMode : 'record';
       bpmInput.value = String(state.bpm);
       if (bpmSlider) bpmSlider.value = String(state.bpm);
       updateMetroButtonUi();
+      updateModeUi();
       recordBarsInput.value = state.recordBars;
       masterVol.value = String(state.masterVolume);
       clickVol.value = String(state.clickVolume);
@@ -2514,6 +2628,40 @@ updatePlayheads();
       return clamp((clientX - rect.left) / rect.width, 0, 1);
     }
 
+    function bindTrackTapSelection() {
+      let startX = 0;
+      let startY = 0;
+      tracksWrap.addEventListener('pointerdown', (e) => {
+        startX = e.clientX;
+        startY = e.clientY;
+      }, { passive: true });
+      tracksWrap.addEventListener('pointerup', (e) => {
+        const card = e.target.closest('[data-track-card]');
+        if (!card) return;
+        const dx = Math.abs(e.clientX - startX);
+        const dy = Math.abs(e.clientY - startY);
+        if (dx > 10 || dy > 10) return;
+        const interactive = e.target.closest('button, input, select, label');
+        const index = Number(card.dataset.trackCard);
+        if (!Number.isFinite(index)) return;
+        if (state.selectedTrack !== index) {
+          state.selectedTrack = index;
+          renderTracks();
+        }
+        if (interactive) return;
+      }, { passive: true });
+      tracksWrap.addEventListener('click', (e) => {
+        const card = e.target.closest('[data-track-card]');
+        if (!card) return;
+        const interactive = e.target.closest('button, input, select, label, canvas.wave');
+        if (interactive) return;
+        const index = Number(card.dataset.trackCard);
+        if (!Number.isFinite(index)) return;
+        state.selectedTrack = index;
+        renderTracks();
+      });
+    }
+
     function bindTimelineClick() {
       tracksWrap.addEventListener('click', (e) => {
         const canvas = e.target.closest('canvas.wave');
@@ -2561,10 +2709,18 @@ updatePlayheads();
 
     function bindEvents() {
       $('micToggleBtn').onclick = async () => { try { if (mediaStream) closeMic(); else await openMic(); } catch (e) { alert('マイクの切り替えに失敗しました: ' + e.message); } };
+      modeButtons.forEach(btn => btn.onclick = () => setViewMode(btn.dataset.modeBtn));
+      if (addTrackBtn) addTrackBtn.onclick = () => { state.visibleTrackCount = clamp((state.visibleTrackCount || 0) + 1, MIN_VISIBLE_TRACKS, TRACK_COUNT); renderTracks(); };
+      if (removeTrackBtn) removeTrackBtn.onclick = () => {
+        state.visibleTrackCount = clamp((state.visibleTrackCount || 0) - 1, MIN_VISIBLE_TRACKS, TRACK_COUNT);
+        if (state.selectedTrack >= state.visibleTrackCount) state.selectedTrack = state.visibleTrackCount - 1;
+        renderTracks();
+      };
       $('monitorBtn').onclick = () => toggleMonitor();
       $('metroBtn').onclick = async () => {
         state.metro = !state.metro;
         updateMetroButtonUi();
+      updateModeUi();
         if (!isPlaying && !isRecording) {
           try {
             if (state.metro) await toggleStandaloneMetronome();
@@ -2572,6 +2728,7 @@ updatePlayheads();
           } catch (e) {
             state.metro = false;
             updateMetroButtonUi();
+      updateModeUi();
             alert('メトロノーム起動に失敗しました: ' + e.message);
           }
         } else {
@@ -2599,7 +2756,7 @@ updatePlayheads();
       $('recBtn').onclick = async () => { try { await recordSelectedTrack(); } catch (e) { alert('録音に失敗しました: ' + e.message); } };
       $('stopBtn').onclick = () => stopTransport();
       $('clearTrackBtn').onclick = () => { tracks[state.selectedTrack] = createTrack(state.selectedTrack); renderTracks(); };
-      $('clearAllBtn').onclick = () => { for (let i = 0; i < TRACK_COUNT; i++) tracks[i] = createTrack(i); renderTracks(); };
+      $('clearAllBtn').onclick = () => { for (let i = 0; i < TRACK_COUNT; i++) tracks[i] = createTrack(i); state.visibleTrackCount = 2; state.selectedTrack = 0; renderTracks(); };
       $('trimKeepBtn').onclick = () => keepOnlySelectedClip(state.selectedTrack);
       $('trimDeleteBtn').onclick = () => deleteSelectedClip(state.selectedTrack);
       $('splitBtn').onclick = () => splitAtTimelineCursor(state.selectedTrack);
@@ -2668,6 +2825,7 @@ updatePlayheads();
     async function boot() {
       setupTracks();
       bindEvents();
+      bindTrackTapSelection();
       bindTimelineClick();
       await initDB().catch(() => null);
       await refreshProjectList().catch(() => null);
