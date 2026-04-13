@@ -192,12 +192,155 @@
       button { min-height: 46px; }
       .grid, .track-body, .track-fx { grid-template-columns: repeat(2, minmax(100px, 1fr)); }
     }
-  </style>
+  
+    /* compact layout overrides */
+    .app { max-width: 1480px; padding: 10px; }
+    h1 { margin: 0 0 4px; font-size: 22px; }
+    .sub { font-size: 11px; line-height: 1.3; }
+    .card {
+      padding: 8px 10px;
+      border-radius: 12px;
+      margin: 0 0 8px;
+    }
+    .sticky .card { padding-top: 8px; padding-bottom: 8px; }
+    .transport { gap: 8px; }
+    .pill {
+      padding: 5px 8px;
+      font-size: 11px;
+    }
+    .beat-indicator {
+      margin-top: 6px;
+      gap: 8px;
+    }
+    .beat-dot {
+      width: 10px;
+      height: 10px;
+    }
+    .grid {
+      grid-template-columns: 110px 140px 140px 180px 180px 140px 140px 1fr;
+      gap: 8px;
+      align-items: end;
+    }
+    .label {
+      font-size: 11px;
+      margin-bottom: 3px;
+    }
+    input[type="number"], input[type="text"], select, input[type="file"] {
+      min-height: 34px;
+      padding: 6px 9px;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+    input[type="range"] {
+      height: 22px;
+      margin: 0;
+    }
+    button {
+      min-height: 34px;
+      padding: 6px 10px;
+      border-radius: 10px;
+      font-size: 13px;
+    }
+    .row { gap: 8px; }
+    .top-actions.sticky { top: 0; }
+    .top-actions .card + .card { margin-top: 6px; }
+    .workspace {
+      grid-template-columns: 300px 1fr;
+      gap: 8px;
+    }
+    .side-panel {
+      top: 124px;
+      max-height: calc(100vh - 136px);
+      gap: 8px;
+    }
+    .tracks-scroller {
+      max-height: calc(100vh - 136px);
+    }
+    .compact-card-title {
+      margin-bottom: 6px;
+    }
+    .mini-note {
+      font-size: 11px;
+      line-height: 1.3;
+    }
+    .pin-actions { gap: 6px; }
+    .pin-actions button { min-height: 32px; }
+    .footer { font-size: 11px; line-height: 1.4; }
+
+    /* force compact top sections */
+    .app-shell > .card,
+    .app-shell > .top-actions {
+      margin-bottom: 6px;
+    }
+
+    /* compact save area */
+    #projectNameInput { min-height: 34px; }
+    #projectsSelect { min-height: 34px; }
+
+    /* compact transport/control rows */
+    #micToggleBtn, #monitorBtn, #metroBtn, #countBtn, #overdubBtn, #loopBtn,
+    #toStartBtn, #playBtn, #appendRecBtn, #overwriteRecBtn, #recBtn, #stopBtn,
+    #clearTrackBtn, #clearAllBtn {
+      min-height: 34px;
+      padding-top: 5px;
+      padding-bottom: 5px;
+    }
+
+    /* tighter track cards so track 1 appears sooner */
+    .track {
+      padding: 8px;
+      gap: 8px;
+      border-radius: 12px;
+    }
+    .track-top {
+      grid-template-columns: 54px 1fr 220px;
+      gap: 8px;
+    }
+    .track-body, .track-fx {
+      gap: 8px;
+    }
+    .wave-wrap {
+      height: 66px;
+    }
+    canvas.wave {
+      height: 66px;
+    }
+
+    @media (max-width: 1280px) {
+      .grid {
+        grid-template-columns: repeat(4, minmax(120px, 1fr));
+      }
+    }
+    @media (max-width: 1100px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+      .side-panel {
+        position: static;
+        max-height: none;
+      }
+      .tracks-scroller {
+        max-height: none;
+      }
+    }
+    @media (max-width: 760px) {
+      .grid {
+        grid-template-columns: repeat(2, minmax(120px, 1fr));
+      }
+      .track-top {
+        grid-template-columns: 54px 1fr;
+      }
+      .track-top > :last-child {
+        grid-column: 1 / -1;
+      }
+    }
+
+</style>
 </head>
 <body>
   <div class="app"><div class="app-shell">
     <h1>LAYER REC STUDIO</h1>
-    <div class="sub">多重録音の試作版です。マイクON/OFF、1/2/4/8/16小節または無制限録音、各トラック音量、リバーブ、ディレイ、WAV書き出し、IndexedDB保存に対応しています。</div>
+    <div class="sub">多重録音・音源取込・WAV書き出し対応。</div>
 
     <div class="top-actions sticky"><div class="card">
       <div class="transport">
@@ -264,7 +407,7 @@
 
 
     <div class="card">
-      <div class="row" style="align-items:end;">
+      <div class="row" style="align-items:end; gap:8px;">
         <div style="min-width:220px; flex:1;">
           <div class="label">保存名</div>
           <input id="projectNameInput" type="text" placeholder="例: chorus-take-01" />
