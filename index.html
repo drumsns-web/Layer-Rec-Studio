@@ -199,7 +199,9 @@
         <button id="loopBtn">↻ Loop</button>
         <button id="toStartBtn">|◀ Start</button>
         <button id="playBtn" class="primary">▶ Play</button>
-        <button id="recBtn" data-mode="overwrite" class="danger">● Rec</button>
+        <button id="appendRecBtn">＋録音（追加）</button>
+        <button id="overwriteRecBtn" class="active">録音し直し</button>
+        <button id="recBtn" class="danger">● Rec</button>
         <button id="stopBtn">■ Stop</button>
         <button id="clearTrackBtn">選択トラック削除</button>
         <button id="clearAllBtn">全消去</button>
@@ -1742,8 +1744,18 @@ updatePlayheads();
       $('overdubBtn').onclick = () => { state.overdub = !state.overdub; $('overdubBtn').classList.toggle('active', state.overdub); };
       $('loopBtn').onclick = () => { state.loop = !state.loop; $('loopBtn').classList.toggle('active', state.loop); setStatus(state.loop ? 'Loop ON' : 'Loop OFF'); };
       $('toStartBtn').onclick = () => moveCursorToStart();
-      $('appendRecBtn').onclick = () => { recordMode = 'append'; updateRecordModeButtons(); setStatus('追加録音モード'); };
-      $('overwriteRecBtn').onclick = () => { recordMode = 'overwrite'; updateRecordModeButtons(); setStatus('上書き録音モード'); };
+      const appendBtn = $('appendRecBtn');
+      const overwriteBtn = $('overwriteRecBtn');
+      if (appendBtn) appendBtn.onclick = () => {
+        recordMode = 'append';
+        updateRecordModeButtons();
+        setStatus('追加録音モード');
+      };
+      if (overwriteBtn) overwriteBtn.onclick = () => {
+        recordMode = 'overwrite';
+        updateRecordModeButtons();
+        setStatus('上書き録音モード');
+      };
       updateRecordModeButtons();
       $('playBtn').onclick = async () => { try { await startPlayback(); } catch (e) { alert('再生に失敗しました: ' + e.message); } };
       $('recBtn').onclick = async () => { try { await recordSelectedTrack(); } catch (e) { alert('録音に失敗しました: ' + e.message); } };
