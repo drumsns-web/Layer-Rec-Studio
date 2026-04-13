@@ -199,7 +199,7 @@
         <button id="loopBtn">↻ Loop</button>
         <button id="toStartBtn">|◀ Start</button>
         <button id="playBtn" class="primary">▶ Play</button>
-        <button id="recBtn" class="danger">● Rec</button>
+        <button id="recBtn" data-mode="overwrite" class="danger">● Rec</button>
         <button id="stopBtn">■ Stop</button>
         <button id="clearTrackBtn">選択トラック削除</button>
         <button id="clearAllBtn">全消去</button>
@@ -319,6 +319,8 @@
     let nextClipId = 1;
     let playbackCycleDuration = 0;
     let calibrating = false;
+let recordMode = 'overwrite'; // overwrite or append
+    let playbackVisualOffset = 0;
 
     const tracks = [];
     const trackEls = [];
@@ -1031,13 +1033,30 @@
         }
       };
 
+      const initialRatioTracks = tracks.map(track => {
+        const total = getTimelineDisplayDuration(track);
+        return clamp((playbackVisualOffset || 0) / total, 0, 1);
+      });
+      initialRatioTracks.forEach((ratio, i) => {
+        trackEls[i].querySelector('.playhead').style.left = `${ratio * 100}%`;
+      });
+
       scheduleCycle(playStartedAt);
       startBeatVisual('play', playStartedAt, duration, state.loop);
-      updatePlayheads();
+      
+// force playhead start from cursor immediately
+tracks.forEach((track, i) => {
+  const total = getTimelineDisplayDuration(track);
+  const ratio = Math.max(0, Math.min(1, (state.timelineCursorTime||0)/total));
+  trackEls[i].querySelector('.playhead').style.left = `${ratio*100}%`;
+});
+updatePlayheads();
+
       setStatus(state.loop ? 'Loop Playing' : 'Playing');
     }
 
     function stopTransport() {
+      try { if (clickGain) clickGain.disconnect(); } catch(e) {}
       isPlaying = false;
       isRecording = false;
       clearInterval(playTimer);
@@ -1046,8 +1065,13 @@
       if (mediaRecorder && mediaRecorder.state !== 'inactive') {
         try { mediaRecorder.stop(); } catch (_) {}
       }
-      trackEls.forEach(el => el.querySelector('.playhead').style.left = '0%');
+      tracks.forEach((track, i) => {
+        const total = getTimelineDisplayDuration(track);
+        const ratio = clamp((state.timelineCursorTime || 0) / total, 0, 1);
+        trackEls[i].querySelector('.playhead').style.left = `${ratio * 100}%`;
+      });
       positionText.textContent = '0.00';
+      playbackVisualOffset = state.timelineCursorTime || 0;
       stopBeatVisual();
       setStatus('Stopped');
     }
@@ -1140,7 +1164,15 @@
       playStartedAt = startAt;
       startBeatVisual(state.countIn ? 'countin' : 'record', state.countIn ? (startAt - 4 * beatDuration()) : startAt, limitSec, false);
       setStatus(state.countIn ? 'Count In' : 'Recording');
-      updatePlayheads();
+      
+// force playhead start from cursor immediately
+tracks.forEach((track, i) => {
+  const total = getTimelineDisplayDuration(track);
+  const ratio = Math.max(0, Math.min(1, (state.timelineCursorTime||0)/total));
+  trackEls[i].querySelector('.playhead').style.left = `${ratio*100}%`;
+});
+updatePlayheads();
+
 
       setTimeout(() => {
         if (!mediaRecorder) return;
@@ -1629,7 +1661,9 @@
 
     function moveCursorToStart() {
       state.timelineCursorTime = 0;
+      playbackVisualOffset = 0;
       renderTracks();
+      trackEls.forEach(el => el.querySelector('.playhead').style.left = '0%');
       positionText.textContent = '0.00';
       setStatus('先頭に戻りました');
     }
@@ -1642,7 +1676,9 @@
       $('overdubBtn').onclick = () => { state.overdub = !state.overdub; $('overdubBtn').classList.toggle('active', state.overdub); };
       $('loopBtn').onclick = () => { state.loop = !state.loop; $('loopBtn').classList.toggle('active', state.loop); setStatus(state.loop ? 'Loop ON' : 'Loop OFF'); };
       $('toStartBtn').onclick = () => moveCursorToStart();
-      $('playBtn').onclick = async () => { try { await startPlayback(); } catch (e) { alert('再生に失敗しました: ' + e.message); } };
+      $('appendRecBtn').onclick = ()=>{recordMode='append'; setStatus('追加録音モード');};
+$('overwriteRecBtn').onclick = ()=>{recordMode='overwrite'; setStatus('上書き録音モード');};
+$('playBtn').onclick = async () => { try { await startPlayback(); } catch (e) { alert('再生に失敗しました: ' + e.message); } };
       $('recBtn').onclick = async () => { try { await recordSelectedTrack(); } catch (e) { alert('録音に失敗しました: ' + e.message); } };
       $('stopBtn').onclick = () => stopTransport();
       $('clearTrackBtn').onclick = () => { tracks[state.selectedTrack] = createTrack(state.selectedTrack); renderTracks(); };
