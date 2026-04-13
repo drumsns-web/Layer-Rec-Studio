@@ -719,6 +719,13 @@
       }
     }
 
+    .toolbar-field-bpm {
+      min-width: 124px;
+    }
+    .toolbar-field-bpm .bpm-slider {
+      margin-top: 4px;
+    }
+
 </style>
 </head>
 <body>
@@ -771,9 +778,10 @@
             <div class="toolbar-block">
               <div class="toolbar-title">Session</div>
               <div class="toolbar-settings">
-                <div class="toolbar-field">
+                <div class="toolbar-field toolbar-field-bpm">
                   <div class="label">BPM</div>
                   <input id="bpmInput" type="number" min="40" max="240" step="1" value="120" />
+                  <input id="bpmSlider" class="bpm-slider" type="range" min="40" max="240" step="1" value="120" />
                 </div>
                 <div class="toolbar-field">
                   <div class="label">小節</div>
@@ -955,12 +963,16 @@
     let playbackVisualOffset = 0;
     let scheduledClickNodes = [];
     let recordingStartOffsetSec = 0;
+    let standaloneMetronome = false;
+    let metronomeSchedulerTimer = null;
+    let metronomeNextBeatTime = 0;
 
     const tracks = [];
     const trackEls = [];
 
     const $ = (id) => document.getElementById(id);
     const bpmInput = $('bpmInput');
+    const bpmSlider = $('bpmSlider');
     const recordBarsInput = $('recordBarsInput');
     const trackSelect = $('trackSelect');
     const masterVol = $('masterVol');
@@ -1573,6 +1585,77 @@
       }
     }
 
+    function updateMetroButtonUi() {
+      const btn = $('metroBtn');
+      if (!btn) return;
+      btn.classList.toggle('active', !!state.metro || standaloneMetronome);
+      btn.textContent = standaloneMetronome ? '♩ON' : '♩';
+    }
+
+    function stopStandaloneMetronome() {
+      standaloneMetronome = false;
+      if (metronomeSchedulerTimer) {
+        clearInterval(metronomeSchedulerTimer);
+        metronomeSchedulerTimer = null;
+      }
+      stopScheduledClicks();
+      stopBeatVisual();
+      updateMetroButtonUi();
+      if (!isPlaying && !isRecording) {
+        positionText.textContent = Number(state.timelineCursorTime || 0).toFixed(2);
+        setStatus('Stopped');
+      }
+    }
+
+    function startStandaloneMetronome() {
+      if (isPlaying || isRecording) return;
+      stopStandaloneMetronome();
+      standaloneMetronome = true;
+      const scheduleAheadSec = 0.22;
+
+      const scheduler = () => {
+        if (!standaloneMetronome || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        if (!metronomeNextBeatTime || metronomeNextBeatTime < now) {
+          metronomeNextBeatTime = now + 0.03;
+        }
+        const nodes = [];
+        while (metronomeNextBeatTime < now + scheduleAheadSec) {
+          const beatIndex = Math.round((metronomeNextBeatTime - (visualStartAt || metronomeNextBeatTime)) / Math.max(0.0001, beatDuration()));
+          const isAccent = ((beatIndex % 4) + 4) % 4 === 0;
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'square';
+          osc.frequency.value = isAccent ? 1200 : 900;
+          gain.gain.setValueAtTime(0.0001, metronomeNextBeatTime);
+          gain.gain.exponentialRampToValueAtTime(state.clickVolume || 0.2, metronomeNextBeatTime + 0.003);
+          gain.gain.exponentialRampToValueAtTime(0.0001, metronomeNextBeatTime + 0.07);
+          osc.connect(gain).connect(clickGain);
+          osc.start(metronomeNextBeatTime);
+          osc.stop(metronomeNextBeatTime + 0.08);
+          nodes.push({ osc, gain });
+          metronomeNextBeatTime += beatDuration();
+        }
+        scheduledClickNodes.push(...nodes);
+      };
+
+      metronomeNextBeatTime = audioCtx.currentTime + 0.03;
+      startBeatVisual('play', metronomeNextBeatTime, 4 * beatDuration(), true);
+      scheduler();
+      metronomeSchedulerTimer = setInterval(scheduler, 80);
+      updateMetroButtonUi();
+      setStatus('Metronome');
+    }
+
+    async function toggleStandaloneMetronome() {
+      await ensureAudio();
+      if (standaloneMetronome) {
+        stopStandaloneMetronome();
+      } else {
+        startStandaloneMetronome();
+      }
+    }
+
     function buildCalibrationPulseBuffer() {
       const sr = audioCtx.sampleRate;
       const dur = 0.12;
@@ -1727,6 +1810,7 @@ updatePlayheads();
     }
 
     function stopTransport() {
+      if (standaloneMetronome) stopStandaloneMetronome();
       isPlaying = false;
       isRecording = false;
       clearInterval(playTimer);
@@ -2188,6 +2272,8 @@ updatePlayheads();
       state.clickVolume = Number(data.clickVolume ?? 0.25);
       state.latencyMs = Number(data.latencyMs ?? 120);
       bpmInput.value = String(state.bpm);
+      if (bpmSlider) bpmSlider.value = String(state.bpm);
+      updateMetroButtonUi();
       recordBarsInput.value = state.recordBars;
       masterVol.value = String(state.masterVolume);
       clickVol.value = String(state.clickVolume);
@@ -2369,7 +2455,22 @@ updatePlayheads();
     function bindEvents() {
       $('micToggleBtn').onclick = async () => { try { if (mediaStream) closeMic(); else await openMic(); } catch (e) { alert('マイクの切り替えに失敗しました: ' + e.message); } };
       $('monitorBtn').onclick = () => toggleMonitor();
-      $('metroBtn').onclick = () => { state.metro = !state.metro; $('metroBtn').classList.toggle('active', state.metro); };
+      $('metroBtn').onclick = async () => {
+        state.metro = !state.metro;
+        updateMetroButtonUi();
+        if (!isPlaying && !isRecording) {
+          try {
+            if (state.metro) await toggleStandaloneMetronome();
+            else stopStandaloneMetronome();
+          } catch (e) {
+            state.metro = false;
+            updateMetroButtonUi();
+            alert('メトロノーム起動に失敗しました: ' + e.message);
+          }
+        } else {
+          setStatus(state.metro ? 'Metro ON' : 'Metro OFF');
+        }
+      };
       $('countBtn').onclick = () => { state.countIn = !state.countIn; $('countBtn').classList.toggle('active', state.countIn); };
       $('overdubBtn').onclick = () => { state.overdub = !state.overdub; $('overdubBtn').classList.toggle('active', state.overdub); };
       $('loopBtn').onclick = () => { state.loop = !state.loop; $('loopBtn').classList.toggle('active', state.loop); setStatus(state.loop ? 'Loop ON' : 'Loop OFF'); };
@@ -2405,10 +2506,22 @@ updatePlayheads();
       $('exportWavBtn').onclick = async () => { try { const mixed = await renderMixdownBuffer(); downloadBlob(audioBufferToWav(mixed), `layerrec-mix-${Date.now()}.wav`); setStatus('WAV exported'); } catch (e) { alert('WAV書き出しに失敗しました: ' + e.message); } };
       $('calibrateBtn').onclick = async () => { try { await autoCalibrateLatency(); } catch (e) { alert('自動測定に失敗しました: ' + e.message); } };
       $('analyzeTrackBtn').onclick = async () => { try { await analyzeSelectedTrack(false); } catch (e) { alert('素材解析に失敗しました: ' + e.message); } };
-      $('applyEstimatedBpmBtn').onclick = async () => { try { const result = lastAnalysis || await analyzeSelectedTrack(false); if (!result?.estimatedBpm) throw new Error('推定BPMを取得できませんでした'); state.bpm = clamp(Number(result.estimatedBpm), 40, 240); bpmInput.value = String(state.bpm); updateTransportInfo(); renderTracks(); updateAnalysisText(`${analysisText.textContent} / 推定BPMを適用しました`); } catch (e) { alert('推定BPM適用に失敗しました: ' + e.message); } };
+      $('applyEstimatedBpmBtn').onclick = async () => { try { const result = lastAnalysis || await analyzeSelectedTrack(false); if (!result?.estimatedBpm) throw new Error('推定BPMを取得できませんでした'); state.bpm = clamp(Number(result.estimatedBpm), 40, 240); bpmInput.value = String(state.bpm); if (bpmSlider) bpmSlider.value = String(state.bpm); updateTransportInfo(); renderTracks(); updateAnalysisText(`${analysisText.textContent} / 推定BPMを適用しました`); } catch (e) { alert('推定BPM適用に失敗しました: ' + e.message); } };
       $('calcBarsFromCurrentBtn').onclick = async () => { try { await analyzeSelectedTrack(true); } catch (e) { alert('小節再計算に失敗しました: ' + e.message); } };
 
-      bpmInput.oninput = () => { state.bpm = clamp(Number(bpmInput.value || 120), 40, 240); updateTransportInfo(); renderTracks(); };
+      const syncBpmControls = (value) => {
+        const bpm = clamp(Number(value || 120), 40, 240);
+        state.bpm = bpm;
+        bpmInput.value = String(bpm);
+        if (bpmSlider) bpmSlider.value = String(bpm);
+        if (standaloneMetronome && !isPlaying && !isRecording && audioCtx) {
+          startStandaloneMetronome();
+        }
+        updateTransportInfo();
+        renderTracks();
+      };
+      bpmInput.oninput = () => syncBpmControls(bpmInput.value);
+      if (bpmSlider) bpmSlider.oninput = () => syncBpmControls(bpmSlider.value);
       recordBarsInput.onchange = () => { state.recordBars = recordBarsInput.value; updateTransportInfo(); renderTracks(); };
       trackSelect.onchange = () => { state.selectedTrack = Number(trackSelect.value || 0); renderTracks(); };
       masterVol.oninput = () => { state.masterVolume = Number(masterVol.value); if (masterGain) masterGain.gain.value = state.masterVolume; };
