@@ -319,8 +319,10 @@
     let nextClipId = 1;
     let playbackCycleDuration = 0;
     let calibrating = false;
-let recordMode = 'overwrite'; // overwrite or append
+    let recordMode = 'overwrite'; // overwrite or append
     let playbackVisualOffset = 0;
+    let scheduledClickNodes = [];
+    let recordingStartOffsetSec = 0;
 
     const tracks = [];
     const trackEls = [];
@@ -386,6 +388,38 @@ let recordMode = 'overwrite'; // overwrite or append
       visualDuration = 0;
       visualLoop = false;
       clearBeatDots();
+    }
+
+    function stopScheduledClicks() {
+      for (const node of scheduledClickNodes) {
+        try { node.osc.stop(); } catch (_) {}
+        try { node.osc.disconnect(); } catch (_) {}
+        try { node.gain.disconnect(); } catch (_) {}
+      }
+      scheduledClickNodes = [];
+    }
+
+    function getSelectedTrackRecordStartOffset() {
+      const track = tracks[state.selectedTrack];
+      if (!track) return 0;
+      if (recordMode === 'append') return getTrackDuration(track);
+      return clamp(state.timelineCursorTime || 0, 0, getTimelineDuration(track));
+    }
+
+    function appendBufferToTrack(track, buffer, startTime, preserveFx = true) {
+      const prev = getSelectedClip(track);
+      const fx = preserveFx && prev ? {
+        gain: prev.gain,
+        pan: prev.pan,
+        delayTime: prev.delayTime,
+        delayFeedback: prev.delayFeedback,
+        delayMix: prev.delayMix,
+      } : {};
+      const clip = createClip(buffer, startTime, fx);
+      track.clips.push(clip);
+      sortTrackClips(track);
+      track.selectedClipId = clip.id;
+      return clip;
     }
 
     function updateBeatVisual() {
@@ -782,7 +816,9 @@ let recordMode = 'overwrite'; // overwrite or append
         updateBeatVisual();
         tracks.forEach((track, i) => {
           const total = getTimelineDuration(track);
-          const ratio = clamp(elapsed / total, 0, 1);
+          const startOffset = clamp(playbackVisualOffset || 0, 0, total);
+          const pos = clamp(startOffset + elapsed, 0, total);
+          const ratio = clamp(pos / total, 0, 1);
           trackEls[i].querySelector('.playhead').style.left = `${ratio * 100}%`;
         });
       }, 40);
@@ -888,6 +924,7 @@ let recordMode = 'overwrite'; // overwrite or append
     }
 
     function scheduleMetronome(startAt, beats) {
+      stopScheduledClicks();
       for (let i = 0; i < beats; i++) {
         const t = startAt + i * beatDuration();
         const osc = audioCtx.createOscillator();
@@ -900,6 +937,7 @@ let recordMode = 'overwrite'; // overwrite or append
         osc.connect(gain).connect(clickGain);
         osc.start(t);
         osc.stop(t + 0.08);
+        scheduledClickNodes.push({ osc, gain });
       }
     }
 
@@ -1014,6 +1052,7 @@ let recordMode = 'overwrite'; // overwrite or append
       const startOffset = clamp(state.timelineCursorTime || 0, 0, fullDuration);
       const duration = Math.max(0.1, fullDuration - startOffset);
       playbackCycleDuration = duration;
+      playbackVisualOffset = startOffset;
       isPlaying = true;
       playStartedAt = audioCtx.currentTime + 0.04;
 
@@ -1056,21 +1095,21 @@ updatePlayheads();
     }
 
     function stopTransport() {
-      try { if (clickGain) clickGain.disconnect(); } catch(e) {}
       isPlaying = false;
       isRecording = false;
       clearInterval(playTimer);
       clearTimeout(recordStopTimer);
       stopAllSources();
+      stopScheduledClicks();
       if (mediaRecorder && mediaRecorder.state !== 'inactive') {
         try { mediaRecorder.stop(); } catch (_) {}
       }
       tracks.forEach((track, i) => {
-        const total = getTimelineDisplayDuration(track);
+        const total = getTimelineDuration(track);
         const ratio = clamp((state.timelineCursorTime || 0) / total, 0, 1);
         trackEls[i].querySelector('.playhead').style.left = `${ratio * 100}%`;
       });
-      positionText.textContent = '0.00';
+      positionText.textContent = Number(state.timelineCursorTime || 0).toFixed(2);
       playbackVisualOffset = state.timelineCursorTime || 0;
       stopBeatVisual();
       setStatus('Stopped');
@@ -1124,37 +1163,57 @@ updatePlayheads();
       mediaRecorder = new MediaRecorder(mediaStream, mimeType ? { mimeType } : undefined);
       recordChunks = [];
       mediaRecorder.ondataavailable = (e) => { if (e.data.size) recordChunks.push(e.data); };
+
+      const track = tracks[state.selectedTrack];
+      recordingStartOffsetSec = getSelectedTrackRecordStartOffset();
+
       mediaRecorder.onstop = async () => {
         try {
           if (!recordChunks.length) return;
           const blob = new Blob(recordChunks, { type: recordChunks[0].type || 'audio/webm' });
           let buffer = await decodeRecordedBlob(blob);
           buffer = trimBufferStart(buffer, Math.max(0, Number(state.latencyMs || 0) / 1000));
-          const track = tracks[state.selectedTrack];
-          if (state.overdub && track.clips.length) {
-            const existing = await renderTrackToBuffer(track);
-            buffer = mixBuffers(existing, buffer);
+          if (!buffer || buffer.duration <= 0.01) {
+            setStatus('録音が短すぎます');
+            return;
           }
-          setTrackSingleBuffer(track, buffer);
+
+          if (recordMode === 'append') {
+            appendBufferToTrack(track, buffer, recordingStartOffsetSec, true);
+            state.timelineCursorTime = recordingStartOffsetSec + buffer.duration;
+          } else {
+            // overwrite mode: replace only from cursor onward for now
+            setTrackSingleBuffer(track, buffer);
+            state.timelineCursorTime = 0;
+          }
+
           renderTracks();
-          setStatus('Recorded');
+          setStatus(recordMode === 'append' ? '追加録音しました' : '録音し直しました');
         } catch (err) {
           alert('録音データの処理に失敗しました: ' + err.message);
         }
       };
 
       if (isPlaying) stopTransport();
+
       let startAt = audioCtx.currentTime + 0.08;
       if (state.countIn) {
         scheduleMetronome(startAt, 4);
         startAt += 4 * beatDuration();
+      } else {
+        stopScheduledClicks();
       }
-      if (state.metro && state.recordBars !== 'inf') scheduleMetronome(startAt, Number(state.recordBars) * 4);
+
+      if (state.metro && state.recordBars !== 'inf') {
+        const beatsToSchedule = Math.max(1, Math.round(recordDurationSeconds() / beatDuration()));
+        scheduleMetronome(startAt, beatsToSchedule);
+      }
+
       if (state.overdub) {
         const soloOn = hasSolo();
-        tracks.forEach(track => {
-          if (!track.clips.length || track.mute || (soloOn && !track.solo)) return;
-          playTrack(track, startAt);
+        tracks.forEach(t => {
+          if (!t.clips.length || t.mute || (soloOn && !t.solo)) return;
+          playTrack(t, startAt, null, 0);
         });
       }
 
@@ -1162,24 +1221,23 @@ updatePlayheads();
       const delayMs = Math.max(0, (startAt - audioCtx.currentTime) * 1000);
       isPlaying = true;
       playStartedAt = startAt;
+      playbackVisualOffset = recordingStartOffsetSec;
       startBeatVisual(state.countIn ? 'countin' : 'record', state.countIn ? (startAt - 4 * beatDuration()) : startAt, limitSec, false);
       setStatus(state.countIn ? 'Count In' : 'Recording');
-      
-// force playhead start from cursor immediately
-tracks.forEach((track, i) => {
-  const total = getTimelineDisplayDuration(track);
-  const ratio = Math.max(0, Math.min(1, (state.timelineCursorTime||0)/total));
-  trackEls[i].querySelector('.playhead').style.left = `${ratio*100}%`;
-});
-updatePlayheads();
 
+      tracks.forEach((t, i) => {
+        const total = getTimelineDuration(t);
+        const ratio = clamp((playbackVisualOffset || 0) / total, 0, 1);
+        trackEls[i].querySelector('.playhead').style.left = `${ratio * 100}%`;
+      });
+      updatePlayheads();
 
       setTimeout(() => {
         if (!mediaRecorder) return;
-        mediaRecorder.start(250);
+        mediaRecorder.start(100);
         isRecording = true;
         visualMode = 'record';
-        setStatus('Recording');
+        setStatus(recordMode === 'append' ? '追加録音中' : '録音中');
       }, delayMs);
 
       recordStopTimer = setTimeout(() => {
@@ -1187,8 +1245,9 @@ updatePlayheads();
         isRecording = false;
         isPlaying = false;
         stopAllSources();
+        stopScheduledClicks();
         stopBeatVisual();
-      }, Math.max(100, delayMs + limitSec * 1000));
+      }, Math.max(200, delayMs + limitSec * 1000));
     }
 
     function cloneAudioBuffer(buffer) {
@@ -1668,6 +1727,13 @@ updatePlayheads();
       setStatus('先頭に戻りました');
     }
 
+    function updateRecordModeButtons() {
+      const appendBtn = $('appendRecBtn');
+      const overwriteBtn = $('overwriteRecBtn');
+      if (appendBtn) appendBtn.classList.toggle('active', recordMode === 'append');
+      if (overwriteBtn) overwriteBtn.classList.toggle('active', recordMode === 'overwrite');
+    }
+
     function bindEvents() {
       $('micToggleBtn').onclick = async () => { try { if (mediaStream) closeMic(); else await openMic(); } catch (e) { alert('マイクの切り替えに失敗しました: ' + e.message); } };
       $('monitorBtn').onclick = () => toggleMonitor();
@@ -1676,9 +1742,10 @@ updatePlayheads();
       $('overdubBtn').onclick = () => { state.overdub = !state.overdub; $('overdubBtn').classList.toggle('active', state.overdub); };
       $('loopBtn').onclick = () => { state.loop = !state.loop; $('loopBtn').classList.toggle('active', state.loop); setStatus(state.loop ? 'Loop ON' : 'Loop OFF'); };
       $('toStartBtn').onclick = () => moveCursorToStart();
-      $('appendRecBtn').onclick = ()=>{recordMode='append'; setStatus('追加録音モード');};
-$('overwriteRecBtn').onclick = ()=>{recordMode='overwrite'; setStatus('上書き録音モード');};
-$('playBtn').onclick = async () => { try { await startPlayback(); } catch (e) { alert('再生に失敗しました: ' + e.message); } };
+      $('appendRecBtn').onclick = () => { recordMode = 'append'; updateRecordModeButtons(); setStatus('追加録音モード'); };
+      $('overwriteRecBtn').onclick = () => { recordMode = 'overwrite'; updateRecordModeButtons(); setStatus('上書き録音モード'); };
+      updateRecordModeButtons();
+      $('playBtn').onclick = async () => { try { await startPlayback(); } catch (e) { alert('再生に失敗しました: ' + e.message); } };
       $('recBtn').onclick = async () => { try { await recordSelectedTrack(); } catch (e) { alert('録音に失敗しました: ' + e.message); } };
       $('stopBtn').onclick = () => stopTransport();
       $('clearTrackBtn').onclick = () => { tracks[state.selectedTrack] = createTrack(state.selectedTrack); renderTracks(); };
