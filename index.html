@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Layer Rec Studio</title>
+  <title>LayerRec Studio</title>
   <style>
     :root {
       --bg: #10131a;
@@ -85,10 +85,6 @@
     .playhead { width: 2px; background: #7bf2b5; left: 0; opacity: .85; }
     .sel { background: rgba(85,208,255,.18); border-left: 1px solid rgba(85,208,255,.6); border-right: 1px solid rgba(85,208,255,.6); }
     .footer { color: var(--muted); font-size: 12px; line-height: 1.6; }
-    .beat-visual { display:flex; gap:8px; align-items:center; }
-    .beat-dot { width:14px; height:14px; border-radius:999px; background:#243045; border:1px solid #41506d; box-shadow: inset 0 0 0 1px rgba(255,255,255,.03); }
-    .beat-dot.active { background: var(--warn); border-color:#ffdf8f; box-shadow: 0 0 0 3px rgba(255,211,111,.16); }
-    .beat-dot.countin { background: var(--accent); border-color:#93e6ff; box-shadow: 0 0 0 3px rgba(85,208,255,.16); }
     @media (max-width: 980px) {
       .grid { grid-template-columns: repeat(3, minmax(120px, 1fr)); }
       .track-top { grid-template-columns: 54px 1fr; }
@@ -101,10 +97,18 @@
       .grid, .track-body, .track-fx { grid-template-columns: repeat(2, minmax(100px, 1fr)); }
     }
   </style>
+
+  <!-- Icons & PWA -->
+  <link rel="icon" type="image/png" href="layerrec_icon_32.png">
+  <link rel="apple-touch-icon" href="layerrec_icon_512.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Layer Rec Studio">
+
 </head>
 <body>
   <div class="app">
-    <h1>Layer Rec Studio</h1>
+    <h1>LAYERREC STUDIO</h1>
     <div class="sub">多重録音の試作版です。マイクON/OFF、1/2/4/8/16小節または無制限録音、各トラック音量、リバーブ、ディレイ、WAV書き出し、IndexedDB保存に対応しています。</div>
 
     <div class="card sticky">
@@ -118,13 +122,6 @@
           <div class="pill">Rec <span id="recLengthText">8.00</span>s</div>
           <div class="pill">Mic <span id="micText">OFF</span></div>
           <div class="pill">Voices <span id="voicesText">0</span></div>
-          <div class="pill">Beat <span id="beatText">—</span></div>
-          <div class="beat-visual" id="beatVisual">
-            <span class="beat-dot" data-beat-dot="0"></span>
-            <span class="beat-dot" data-beat-dot="1"></span>
-            <span class="beat-dot" data-beat-dot="2"></span>
-            <span class="beat-dot" data-beat-dot="3"></span>
-          </div>
         </div>
       </div>
     </div>
@@ -274,9 +271,6 @@
     let recordStopTimer = null;
     let nextClipId = 1;
     let playbackCycleDuration = 0;
-    let visualMode = 'idle';
-    let visualStartAt = 0;
-    let visualCountInBeats = 0;
 
     const tracks = [];
     const trackEls = [];
@@ -295,8 +289,6 @@
     const recLengthText = $('recLengthText');
     const micText = $('micText');
     const voicesText = $('voicesText');
-    const beatText = $('beatText');
-    const beatDots = Array.from(document.querySelectorAll('[data-beat-dot]'));
     const projectNameInput = $('projectNameInput');
     const projectsSelect = $('projectsSelect');
     const storageInfo = $('storageInfo');
@@ -307,21 +299,6 @@
     function recordDurationSeconds() { return state.recordBars === 'inf' ? MAX_REC_SECONDS : barsToSeconds(state.recordBars); }
     function hasSolo() { return tracks.some(t => t.solo); }
     function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
-
-    function setBeatVisual(beatIndex = -1, mode = 'idle') {
-      beatDots.forEach((dot, i) => {
-        dot.classList.toggle('active', i === beatIndex);
-        dot.classList.toggle('countin', mode === 'countin' && i === beatIndex);
-      });
-      beatText.textContent = beatIndex >= 0 ? `${beatIndex + 1}/4` : '—';
-    }
-
-    function resetBeatVisual() {
-      visualMode = 'idle';
-      visualStartAt = 0;
-      visualCountInBeats = 0;
-      setBeatVisual(-1, 'idle');
-    }
 
     function updateTransportInfo() {
       const loaded = tracks.filter(t => t.clips.length).length;
@@ -356,17 +333,8 @@
       return impulse;
     }
 
-    function createClip(buffer, startTime = 0, fx = {}) {
-      return {
-        id: `clip-${nextClipId++}`,
-        buffer,
-        startTime,
-        gain: Number(fx.gain ?? 1),
-        pan: Number(fx.pan ?? 0),
-        delayTime: Number(fx.delayTime ?? 0.18),
-        delayFeedback: Number(fx.delayFeedback ?? 0.2),
-        delayMix: Number(fx.delayMix ?? 0),
-      };
+    function createClip(buffer, startTime = 0) {
+      return { id: `clip-${nextClipId++}`, buffer, startTime };
     }
 
     function createTrack(id) {
@@ -407,15 +375,7 @@
     }
 
     function setTrackSingleBuffer(track, buffer) {
-      const prev = getSelectedClip(track);
-      const fx = prev ? {
-        gain: prev.gain,
-        pan: prev.pan,
-        delayTime: prev.delayTime,
-        delayFeedback: prev.delayFeedback,
-        delayMix: prev.delayMix,
-      } : {};
-      track.clips = buffer ? [createClip(buffer, 0, fx)] : [];
+      track.clips = buffer ? [createClip(buffer, 0)] : [];
       track.selectedClipId = track.clips[0]?.id || null;
     }
 
@@ -452,12 +412,12 @@
             <div class="playhead"></div>
           </div>
           <div class="track-body">
-            <div><div class="label">Clip Vol <span data-gainv="${i}">100%</span></div><input data-gain="${i}" type="range" min="0" max="1.5" step="0.01" value="1" /></div>
-            <div><div class="label">Clip Pan <span data-panv="${i}">0.00</span></div><input data-pan="${i}" type="range" min="-1" max="1" step="0.01" value="0" /></div>
-            <div><div class="label">Reverb(Track) <span data-reverbv="${i}">0%</span></div><input data-reverb="${i}" type="range" min="0" max="1" step="0.01" value="0" /></div>
-            <div><div class="label">Clip Delay Mix <span data-delaymixv="${i}">0%</span></div><input data-delaymix="${i}" type="range" min="0" max="1" step="0.01" value="0" /></div>
-            <div><div class="label">Clip Delay Time <span data-delaytimev="${i}">0.18s</span></div><input data-delaytime="${i}" type="range" min="0.05" max="0.8" step="0.01" value="0.18" /></div>
-            <div><div class="label">Clip Feedback <span data-feedbackv="${i}">20%</span></div><input data-feedback="${i}" type="range" min="0" max="0.85" step="0.01" value="0.2" /></div>
+            <div><div class="label">Volume</div><input data-gain="${i}" type="range" min="0" max="1.5" step="0.01" value="1" /></div>
+            <div><div class="label">Pan</div><input data-pan="${i}" type="range" min="-1" max="1" step="0.01" value="0" /></div>
+            <div><div class="label">Reverb <span data-reverbv="${i}">0%</span></div><input data-reverb="${i}" type="range" min="0" max="1" step="0.01" value="0" /></div>
+            <div><div class="label">Delay Mix <span data-delaymixv="${i}">0%</span></div><input data-delaymix="${i}" type="range" min="0" max="1" step="0.01" value="0" /></div>
+            <div><div class="label">Delay Time <span data-delaytimev="${i}">0.18s</span></div><input data-delaytime="${i}" type="range" min="0.05" max="0.8" step="0.01" value="0.18" /></div>
+            <div><div class="label">Feedback <span data-feedbackv="${i}">20%</span></div><input data-feedback="${i}" type="range" min="0" max="0.85" step="0.01" value="0.2" /></div>
           </div>
         `;
         tracksWrap.appendChild(el);
@@ -495,19 +455,18 @@
         if (muteBtn) muteBtn.classList.toggle('active', track.mute);
         if (soloBtn) soloBtn.classList.toggle('active', track.solo);
         el.querySelector('.meta-text').textContent = formatTrackMeta(track);
-        const selectedClip = getSelectedClip(track);
-        el.querySelector('[data-gain]').value = selectedClip ? selectedClip.gain : 1;
-        el.querySelector('[data-pan]').value = selectedClip ? selectedClip.pan : 0;
-        const gvv = el.querySelector('[data-gainv]'); if (gvv) gvv.textContent = `${Math.round((selectedClip ? selectedClip.gain : 1) * 100)}%`;
-        const pvv = el.querySelector('[data-panv]'); if (pvv) pvv.textContent = `${Number(selectedClip ? selectedClip.pan : 0).toFixed(2)}`;
+        el.querySelector('[data-gain]').value = track.gain;
+        el.querySelector('[data-pan]').value = track.pan;
+        const gvv = el.querySelector('[data-gainv]'); if (gvv) gvv.textContent = `${Math.round(track.gain * 100)}%`;
+        const pvv = el.querySelector('[data-panv]'); if (pvv) pvv.textContent = `${Number(track.pan).toFixed(2)}`;
         el.querySelector('[data-reverb]').value = track.reverbMix;
-        el.querySelector('[data-delaymix]').value = selectedClip ? selectedClip.delayMix : 0;
-        el.querySelector('[data-delaytime]').value = selectedClip ? selectedClip.delayTime : 0.18;
-        el.querySelector('[data-feedback]').value = selectedClip ? selectedClip.delayFeedback : 0.2;
+        el.querySelector('[data-delaymix]').value = track.delayMix;
+        el.querySelector('[data-delaytime]').value = track.delayTime;
+        el.querySelector('[data-feedback]').value = track.delayFeedback;
         const rv = el.querySelector('[data-reverbv]'); if (rv) rv.textContent = `${Math.round(track.reverbMix * 100)}%`;
-        const dmv = el.querySelector('[data-delaymixv]'); if (dmv) dmv.textContent = `${Math.round((selectedClip ? selectedClip.delayMix : 0) * 100)}%`;
-        const dtv = el.querySelector('[data-delaytimev]'); if (dtv) dtv.textContent = `${Number(selectedClip ? selectedClip.delayTime : 0.18).toFixed(2)}s`;
-        const fbv = el.querySelector('[data-feedbackv]'); if (fbv) fbv.textContent = `${Math.round((selectedClip ? selectedClip.delayFeedback : 0.2) * 100)}%`;
+        const dmv = el.querySelector('[data-delaymixv]'); if (dmv) dmv.textContent = `${Math.round(track.delayMix * 100)}%`;
+        const dtv = el.querySelector('[data-delaytimev]'); if (dtv) dtv.textContent = `${Number(track.delayTime).toFixed(2)}s`;
+        const fbv = el.querySelector('[data-feedbackv]'); if (fbv) fbv.textContent = `${Math.round(track.delayFeedback * 100)}%`;
         drawWaveform(i);
       }
       trackSelect.value = String(state.selectedTrack);
@@ -561,23 +520,6 @@
 
       const track = tracks[index];
       const total = Math.max(0.1, getTrackDuration(track));
-      const barDur = 4 * beatDuration();
-      const barCount = Math.max(1, Math.ceil(total / barDur));
-      ctx.font = '10px sans-serif';
-      for (let bar = 0; bar <= barCount; bar++) {
-        const t = Math.min(total, bar * barDur);
-        const xBar = (t / total) * cssW;
-        ctx.strokeStyle = bar % 4 === 0 ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.09)';
-        ctx.beginPath();
-        ctx.moveTo(xBar + 0.5, 0);
-        ctx.lineTo(xBar + 0.5, cssH);
-        ctx.stroke();
-        if (bar < barCount) {
-          ctx.fillStyle = 'rgba(255,255,255,0.45)';
-          ctx.fillText(String(bar + 1), Math.min(cssW - 10, xBar + 4), 11);
-        }
-      }
-
       const cursorX = (state.selectedTrack === index ? (state.timelineCursorTime / total) * cssW : null);
       for (const clip of track.clips) {
         const x = (clip.startTime / total) * cssW;
@@ -605,22 +547,9 @@
         if (!isPlaying) {
           trackEls.forEach(el => el.querySelector('.playhead').style.left = '0%');
           positionText.textContent = '0.00';
-          resetBeatVisual();
           return;
         }
-        const now = audioCtx.currentTime;
-        let visualBeat = -1;
-        let visualBeatMode = 'play';
-        if (visualMode === 'countin' && now < playStartedAt) {
-          const countElapsed = Math.max(0, now - visualStartAt);
-          visualBeat = Math.floor(countElapsed / beatDuration()) % 4;
-          visualBeatMode = 'countin';
-        } else {
-          const playElapsedForBeat = Math.max(0, now - playStartedAt);
-          visualBeat = Math.floor(playElapsedForBeat / beatDuration()) % 4;
-        }
-        setBeatVisual(visualBeat, visualBeatMode);
-        const rawElapsed = Math.max(0, now - playStartedAt);
+        const rawElapsed = Math.max(0, audioCtx.currentTime - playStartedAt);
         const elapsed = state.loop && playbackCycleDuration > 0 ? (rawElapsed % playbackCycleDuration) : rawElapsed;
         positionText.textContent = elapsed.toFixed(2);
         tracks.forEach((track, i) => {
@@ -664,34 +593,27 @@
       voicesText.textContent = '0';
     }
 
-    function createTrackBus(ctx, track) {
-      const trackInput = ctx.createGain();
+    function createTrackChain(ctx, track) {
+      const inputGain = ctx.createGain();
+      inputGain.gain.value = track.gain;
+      const panner = ctx.createStereoPanner();
+      panner.pan.value = track.pan;
+      const dryGain = ctx.createGain();
+      dryGain.gain.value = 1;
+      const wetRevGain = ctx.createGain();
+      wetRevGain.gain.value = track.reverbMix;
+      const wetDelayGain = ctx.createGain();
+      wetDelayGain.gain.value = track.delayMix;
       const out = ctx.createGain();
       const convolver = ctx.createConvolver();
       convolver.buffer = generateImpulse(ctx);
-      const wetRevGain = ctx.createGain();
-      wetRevGain.gain.value = track.reverbMix;
-      trackInput.connect(out);
-      trackInput.connect(convolver);
-      convolver.connect(wetRevGain).connect(out);
-      return { input: trackInput, output: out };
-    }
-
-    function createClipChain(ctx, clip) {
-      const inputGain = ctx.createGain();
-      inputGain.gain.value = clip.gain ?? 1;
-      const panner = ctx.createStereoPanner();
-      panner.pan.value = clip.pan ?? 0;
-      const dryGain = ctx.createGain();
-      dryGain.gain.value = 1;
-      const wetDelayGain = ctx.createGain();
-      wetDelayGain.gain.value = clip.delayMix ?? 0;
-      const out = ctx.createGain();
       const delay = ctx.createDelay(1.0);
-      delay.delayTime.value = clip.delayTime ?? 0.18;
+      delay.delayTime.value = track.delayTime;
       const feedback = ctx.createGain();
-      feedback.gain.value = clip.delayFeedback ?? 0.2;
+      feedback.gain.value = track.delayFeedback;
       inputGain.connect(dryGain).connect(panner).connect(out);
+      inputGain.connect(convolver);
+      convolver.connect(wetRevGain).connect(panner).connect(out);
       inputGain.connect(delay);
       delay.connect(wetDelayGain).connect(panner).connect(out);
       delay.connect(feedback).connect(delay);
@@ -700,11 +622,9 @@
 
     function playTrack(track, when = 0, offline = null) {
       const ctx = offline || audioCtx;
-      const bus = createTrackBus(ctx, track);
-      bus.output.connect(offline ? ctx.destination : masterGain);
+      const chain = createTrackChain(ctx, track);
+      chain.output.connect(offline ? ctx.destination : masterGain);
       for (const clip of track.clips) {
-        const chain = createClipChain(ctx, clip);
-        chain.output.connect(bus.input);
         const source = ctx.createBufferSource();
         source.buffer = clip.buffer;
         source.connect(chain.input);
@@ -748,9 +668,6 @@
       playbackCycleDuration = duration;
       isPlaying = true;
       playStartedAt = audioCtx.currentTime + 0.04;
-      visualMode = 'play';
-      visualStartAt = playStartedAt;
-      visualCountInBeats = 0;
 
       const scheduleCycle = (cycleStart) => {
         if (!isPlaying) return;
@@ -784,7 +701,6 @@
       }
       trackEls.forEach(el => el.querySelector('.playhead').style.left = '0%');
       positionText.textContent = '0.00';
-      resetBeatVisual();
       setStatus('Stopped');
     }
 
@@ -874,9 +790,6 @@
       const delayMs = Math.max(0, (startAt - audioCtx.currentTime) * 1000);
       isPlaying = true;
       playStartedAt = startAt;
-      visualMode = state.countIn ? 'countin' : 'record';
-      visualStartAt = state.countIn ? (startAt - 4 * beatDuration()) : startAt;
-      visualCountInBeats = state.countIn ? 4 : 0;
       setStatus(state.countIn ? 'Count In' : 'Recording');
       updatePlayheads();
 
@@ -935,13 +848,7 @@
       const track = tracks[index];
       const clip = getSelectedClip(track);
       if (!clip) return;
-      track.clips = [createClip(cloneAudioBuffer(clip.buffer), 0, {
-        gain: clip.gain,
-        pan: clip.pan,
-        delayTime: clip.delayTime,
-        delayFeedback: clip.delayFeedback,
-        delayMix: clip.delayMix,
-      })];
+      track.clips = [createClip(cloneAudioBuffer(clip.buffer), 0)];
       track.selectedClipId = track.clips[0].id;
       renderTracks();
       setStatus('Selected clip kept');
@@ -962,13 +869,7 @@
       const clip = getSelectedClip(track);
       if (!clip) return;
       const idx = track.clips.findIndex(c => c.id === clip.id);
-      const newClip = createClip(cloneAudioBuffer(clip.buffer), clip.startTime + clip.buffer.duration, {
-        gain: clip.gain,
-        pan: clip.pan,
-        delayTime: clip.delayTime,
-        delayFeedback: clip.delayFeedback,
-        delayMix: clip.delayMix,
-      });
+      const newClip = createClip(cloneAudioBuffer(clip.buffer), clip.startTime + clip.buffer.duration);
       track.clips.splice(idx + 1, 0, newClip);
       track.selectedClipId = newClip.id;
       normalizeTrackClips(track);
@@ -1074,16 +975,16 @@
           name: track.name,
           mute: track.mute,
           solo: track.solo,
+          gain: track.gain,
+          pan: track.pan,
           reverbMix: track.reverbMix,
+          delayTime: track.delayTime,
+          delayFeedback: track.delayFeedback,
+          delayMix: track.delayMix,
           selectedClipId: track.selectedClipId,
           clips: await Promise.all(track.clips.map(async (clip) => ({
             id: clip.id,
             startTime: clip.startTime,
-            gain: clip.gain ?? 1,
-            pan: clip.pan ?? 0,
-            delayTime: clip.delayTime ?? 0.18,
-            delayFeedback: clip.delayFeedback ?? 0.2,
-            delayMix: clip.delayMix ?? 0,
             wavBase64: await bufferToBase64Wav(clip.buffer),
           }))),
         }))),
@@ -1112,21 +1013,17 @@
         t.name = src.name || `Track ${i + 1}`;
         t.mute = !!src.mute;
         t.solo = !!src.solo;
+        t.gain = Number(src.gain ?? 1);
+        t.pan = Number(src.pan ?? 0);
         t.reverbMix = Number(src.reverbMix ?? 0);
+        t.delayTime = Number(src.delayTime ?? 0.18);
+        t.delayFeedback = Number(src.delayFeedback ?? 0.2);
+        t.delayMix = Number(src.delayMix ?? 0);
         t.clips = [];
         for (const c of (src.clips || [])) {
           const bytes = Uint8Array.from(atob(c.wavBase64), ch => ch.charCodeAt(0));
           const buffer = await audioCtx.decodeAudioData(bytes.buffer.slice(0));
-          t.clips.push({
-            id: c.id || `clip-${nextClipId++}`,
-            startTime: Number(c.startTime || 0),
-            gain: Number(c.gain ?? 1),
-            pan: Number(c.pan ?? 0),
-            delayTime: Number(c.delayTime ?? 0.18),
-            delayFeedback: Number(c.delayFeedback ?? 0.2),
-            delayMix: Number(c.delayMix ?? 0),
-            buffer,
-          });
+          t.clips.push({ id: c.id || `clip-${nextClipId++}`, startTime: Number(c.startTime || 0), buffer });
         }
         t.selectedClipId = src.selectedClipId || t.clips[0]?.id || null;
         normalizeTrackClips(t);
@@ -1306,15 +1203,12 @@
         if (!dataAttr) return;
         const index = Number(t.dataset[dataAttr]);
         const track = tracks[index];
-        const clip = getSelectedClip(track);
+        if (dataAttr === 'gain') track.gain = Number(t.value);
+        if (dataAttr === 'pan') track.pan = Number(t.value);
         if (dataAttr === 'reverb') track.reverbMix = Number(t.value);
-        else if (clip) {
-          if (dataAttr === 'gain') clip.gain = Number(t.value);
-          if (dataAttr === 'pan') clip.pan = Number(t.value);
-          if (dataAttr === 'delaymix') clip.delayMix = Number(t.value);
-          if (dataAttr === 'delaytime') clip.delayTime = Number(t.value);
-          if (dataAttr === 'feedback') clip.delayFeedback = Number(t.value);
-        }
+        if (dataAttr === 'delaymix') track.delayMix = Number(t.value);
+        if (dataAttr === 'delaytime') track.delayTime = Number(t.value);
+        if (dataAttr === 'feedback') track.delayFeedback = Number(t.value);
         renderTracks();
       });
     }
@@ -1323,7 +1217,6 @@
       setupTracks();
       bindEvents();
       bindTimelineClick();
-      resetBeatVisual();
       await initDB().catch(() => null);
       await refreshProjectList().catch(() => null);
       updateTransportInfo();
