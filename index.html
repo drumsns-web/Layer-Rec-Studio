@@ -486,6 +486,239 @@
       }
     }
 
+
+    /* daw toolbar redesign */
+    .app-shell > h1,
+    .app-shell > .sub {
+      display: none;
+    }
+    .top-actions.sticky {
+      position: sticky;
+      top: 0;
+      z-index: 80;
+      padding-top: 4px;
+      background: linear-gradient(180deg, rgba(12,15,21,0.98), rgba(12,15,21,0.88));
+      backdrop-filter: blur(10px);
+    }
+    .studio-toolbar {
+      display: grid;
+      gap: 6px;
+    }
+    .toolbar-card {
+      background: rgba(23,28,37,.97);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 6px 8px;
+      box-shadow: 0 8px 22px rgba(0,0,0,.18);
+    }
+    .toolbar-row {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 1.4fr;
+      gap: 6px;
+      align-items: stretch;
+    }
+    .toolbar-block {
+      min-width: 0;
+      display: grid;
+      gap: 4px;
+      align-content: center;
+    }
+    .toolbar-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .toolbar-title {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: .04em;
+      white-space: nowrap;
+    }
+    .toolbar-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .toolbar-pills .pill,
+    .toolbar-head .pill {
+      padding: 4px 7px;
+      font-size: 10px;
+      min-height: 0;
+    }
+    .toolbar-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      align-content: center;
+    }
+    .toolbar-actions button,
+    .toolbar-mini-actions button,
+    .project-actions button {
+      min-height: 28px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      font-size: 11px;
+    }
+    .toolbar-settings {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 4px;
+      align-items: end;
+    }
+    .toolbar-field .label {
+      font-size: 10px;
+      margin-bottom: 2px;
+    }
+    .toolbar-field input[type="number"],
+    .toolbar-field input[type="text"],
+    .toolbar-field select,
+    .toolbar-field input[type="file"] {
+      min-height: 28px;
+      padding: 4px 7px;
+      font-size: 11px;
+    }
+    .toolbar-field input[type="range"] {
+      height: 16px;
+    }
+    .toolbar-mini {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto;
+      gap: 6px;
+      align-items: end;
+    }
+    .project-strip {
+      display: grid;
+      grid-template-columns: minmax(120px, 180px) auto minmax(120px, 180px);
+      gap: 4px;
+      align-items: end;
+    }
+    .project-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      justify-content: flex-start;
+    }
+    .file-mini-label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--panel2);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .file-mini-label input {
+      display: none;
+    }
+    .analysis-strip {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 4px;
+      align-items: end;
+    }
+    .toolbar-mini-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      justify-content: flex-end;
+    }
+    .analysis-pill {
+      min-height: 28px;
+      display: flex;
+      align-items: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .toolbar-note {
+      font-size: 10px;
+      color: var(--muted);
+      line-height: 1.1;
+    }
+    .workspace {
+      grid-template-columns: 240px 1fr;
+      gap: 6px;
+    }
+    .side-panel {
+      top: 126px;
+      max-height: calc(100vh - 134px);
+    }
+    .tracks-scroller {
+      max-height: calc(100vh - 134px);
+    }
+    @media (max-width: 1100px) {
+      .toolbar-row,
+      .toolbar-mini,
+      .project-strip,
+      .analysis-strip {
+        grid-template-columns: 1fr;
+      }
+      .toolbar-settings {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+      }
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+      .side-panel,
+      .tracks-scroller {
+        position: static;
+        max-height: none;
+      }
+    }
+    @media (max-width: 760px) {
+      .top-actions.sticky {
+        padding-top: 2px;
+      }
+      .studio-toolbar {
+        gap: 4px;
+      }
+      .toolbar-card {
+        padding: 5px 6px;
+        border-radius: 10px;
+      }
+      .toolbar-row {
+        grid-template-columns: 1fr;
+      }
+      .toolbar-settings {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .toolbar-actions,
+      .project-actions,
+      .toolbar-mini-actions,
+      .toolbar-pills {
+        gap: 3px;
+      }
+      .toolbar-actions button,
+      .toolbar-mini-actions button,
+      .project-actions button,
+      .file-mini-label {
+        min-height: 26px;
+        padding: 4px 7px;
+        font-size: 10px;
+      }
+      .toolbar-head {
+        align-items: flex-start;
+      }
+      .toolbar-pills .pill,
+      .toolbar-head .pill {
+        font-size: 9px;
+        padding: 3px 6px;
+      }
+      .analysis-strip,
+      .toolbar-mini,
+      .project-strip {
+        grid-template-columns: 1fr;
+      }
+      .workspace {
+        gap: 4px;
+      }
+    }
+
 </style>
 </head>
 <body>
@@ -493,127 +726,136 @@
     <h1>LAYER REC STUDIO</h1>
     <div class="sub">多重録音・音源取込・WAV書き出し対応。</div>
 
-    <div class="top-actions sticky"><div class="card">
-      <div class="transport">
-        <div>
-          <div class="pill" id="statusText">Ready</div>
-          <div class="sub" id="transportInfo">0 tracks · 120 BPM · rec 4 bars</div>
-        </div>
-        <div class="row">
-          <div class="pill">Position <span id="positionText">0.00</span>s</div>
-          <div class="pill">Rec <span id="recLengthText">8.00</span>s</div>
-          <div class="pill">Mic <span id="micText">OFF</span></div>
-          <div class="pill">Voices <span id="voicesText">0</span></div>
-        </div>
-      </div>
-      <div class="beat-indicator" id="beatIndicator" aria-label="visual click">
-        <div class="beat-dot" data-beat-dot="0"></div>
-        <div class="beat-dot" data-beat-dot="1"></div>
-        <div class="beat-dot" data-beat-dot="2"></div>
-        <div class="beat-dot" data-beat-dot="3"></div>
-      </div>
-    </div></div>
+    <div class="top-actions sticky">
+      <div class="studio-toolbar">
+        <div class="toolbar-card">
+          <div class="toolbar-row">
+            <div class="toolbar-block">
+              <div class="toolbar-head">
+                <div class="pill" id="statusText">Ready</div>
+                <div class="toolbar-title">LAYER REC STUDIO</div>
+              </div>
+              <div class="toolbar-note" id="transportInfo">0 tracks · 120 BPM · rec 4 bars</div>
+              <div class="toolbar-pills">
+                <div class="pill">Pos <span id="positionText">0.00</span>s</div>
+                <div class="pill">Rec <span id="recLengthText">8.00</span>s</div>
+                <div class="pill">Mic <span id="micText">OFF</span></div>
+                <div class="pill">Voices <span id="voicesText">0</span></div>
+              </div>
+              <div class="beat-indicator" id="beatIndicator" aria-label="visual click">
+                <div class="beat-dot" data-beat-dot="0"></div>
+                <div class="beat-dot" data-beat-dot="1"></div>
+                <div class="beat-dot" data-beat-dot="2"></div>
+                <div class="beat-dot" data-beat-dot="3"></div>
+              </div>
+            </div>
 
-    <div class="card grid">
-      <div>
-        <div class="label">BPM</div>
-        <input id="bpmInput" type="number" min="40" max="240" step="1" value="120" />
-      </div>
-      <div>
-        <div class="label">録音小節数</div>
-        <select id="recordBarsInput">
-          <option value="1">1小節</option>
-          <option value="2">2小節</option>
-          <option value="4" selected>4小節</option>
-          <option value="8">8小節</option>
-          <option value="16">16小節</option>
-          <option value="inf">無制限(最大10分)</option>
-        </select>
-      </div>
-      <div>
-        <div class="label">選択トラック</div>
-        <select id="trackSelect"></select>
-      </div>
-      <div>
-        <div class="label">Master</div>
-        <input id="masterVol" type="range" min="0" max="1.2" step="0.01" value="1" />
-      </div>
-      <div>
-        <div class="label">Click</div>
-        <input id="clickVol" type="range" min="0" max="1" step="0.01" value="0.25" />
-      </div>
-      <div>
-        <div class="label">遅延(ms)</div>
-        <input id="latencyMsInput" type="number" min="0" max="500" step="5" value="120" />
-      </div>
-      <div>
-        <div class="label">自動測定</div>
-        <button id="calibrateBtn">自動測定</button>
-      </div>
-      <div>
-        <div class="label">素材解析</div>
-        <button id="analyzeTrackBtn">トラック解析</button>
-      </div>
-    </div>
+            <div class="toolbar-block">
+              <div class="toolbar-title">Transport</div>
+              <div class="toolbar-actions">
+                <button id="toStartBtn">|◀</button>
+                <button id="playBtn" class="primary">▶</button>
+                <button id="stopBtn">■</button>
+                <button id="recBtn" class="danger">●</button>
+                <button id="appendRecBtn">追加</button>
+                <button id="overwriteRecBtn" class="active">上書</button>
+                <button id="loopBtn">↻</button>
+                <button id="metroBtn">♩</button>
+                <button id="countBtn" class="active">Count</button>
+                <button id="micToggleBtn">MIC</button>
+                <button id="monitorBtn">Mon</button>
+                <button id="overdubBtn">Dub</button>
+              </div>
+            </div>
 
+            <div class="toolbar-block">
+              <div class="toolbar-title">Session</div>
+              <div class="toolbar-settings">
+                <div class="toolbar-field">
+                  <div class="label">BPM</div>
+                  <input id="bpmInput" type="number" min="40" max="240" step="1" value="120" />
+                </div>
+                <div class="toolbar-field">
+                  <div class="label">小節</div>
+                  <select id="recordBarsInput">
+                    <option value="1">1小節</option>
+                    <option value="2">2小節</option>
+                    <option value="4" selected>4小節</option>
+                    <option value="8">8小節</option>
+                    <option value="16">16小節</option>
+                    <option value="inf">無制限</option>
+                  </select>
+                </div>
+                <div class="toolbar-field">
+                  <div class="label">Track</div>
+                  <select id="trackSelect"></select>
+                </div>
+                <div class="toolbar-field">
+                  <div class="label">Master</div>
+                  <input id="masterVol" type="range" min="0" max="1.2" step="0.01" value="1" />
+                </div>
+                <div class="toolbar-field">
+                  <div class="label">Click</div>
+                  <input id="clickVol" type="range" min="0" max="1" step="0.01" value="0.25" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-    <div class="card">
-      <div class="row" style="align-items:end; gap:8px;">
-        <div style="min-width:220px; flex:1;">
-          <div class="label">保存名</div>
-          <input id="projectNameInput" type="text" placeholder="例: chorus-take-01" />
-        </div>
-        <div class="row">
-          <button id="saveIdbBtn" class="good">💾 保存</button>
-          <button id="loadIdbBtn">↺ 読込</button>
-          <button id="deleteIdbBtn" class="danger">✕ 削除</button>
-          <button id="exportWavBtn" class="good">↓ WAV</button>
-          <button id="saveProjectBtn">↗ JSON</button>
-          <label>
-            <input id="loadProjectInput" type="file" accept="application/json" />
-          </label>
-        </div>
-      </div>
-      <div class="row" style="margin-top:10px; align-items:end;">
-        <div style="min-width:240px; flex:1;">
-          <div class="label">保存済み</div>
-          <select id="projectsSelect"></select>
-        </div>
-        <div class="meta" id="storageInfo">IndexedDB: 初期化前</div>
-      </div>
-    </div>
+        <div class="toolbar-card">
+          <div class="toolbar-mini">
+            <div class="toolbar-block">
+              <div class="toolbar-title">保存 / 書き出し</div>
+              <div class="project-strip">
+                <div class="toolbar-field">
+                  <div class="label">保存名</div>
+                  <input id="projectNameInput" type="text" placeholder="take-01" />
+                </div>
+                <div class="project-actions">
+                  <button id="saveIdbBtn" class="good">💾 保存</button>
+                  <button id="loadIdbBtn">↺ 読込</button>
+                  <button id="deleteIdbBtn" class="danger">✕ 削除</button>
+                  <button id="exportWavBtn" class="good">↓ WAV</button>
+                  <button id="saveProjectBtn">↗ JSON</button>
+                  <label class="file-mini-label">JSON読込<input id="loadProjectInput" type="file" accept="application/json" /></label>
+                </div>
+                <div class="toolbar-field">
+                  <div class="label">保存済み</div>
+                  <select id="projectsSelect"></select>
+                </div>
+              </div>
+              <div class="toolbar-note" id="storageInfo">IndexedDB: 初期化前</div>
+            </div>
 
-    <div class="card">
-      <div class="row">
-        <button id="micToggleBtn">MIC ON</button>
-        <button id="monitorBtn">Monitor</button>
-        <button id="metroBtn">♩ Metro</button>
-        <button id="countBtn" class="active">4 Count In</button>
-        <button id="overdubBtn">⊕ Overdub</button>
-        <button id="loopBtn">↻ Loop</button>
-        <button id="toStartBtn">|◀ Start</button>
-        <button id="playBtn" class="primary">▶ Play</button>
-        <button id="appendRecBtn">追加録音</button>
-        <button id="overwriteRecBtn" class="active">上書き録音</button>
-        <button id="recBtn" class="danger">● Rec</button>
-        <button id="stopBtn">■ Stop</button>
-        <button id="clearTrackBtn">Track削除</button>
-        <button id="clearAllBtn">全消去</button>
-      </div>
-    </div>
-    <div class="card">
-      <div class="row" style="justify-content: space-between;">
-        <strong>素材解析</strong>
-        <div class="meta">推定BPMと小節数を表示します。</div>
-      </div>
-      <div class="row" style="margin-top:10px; align-items:end;">
-        <div style="min-width:260px; flex:1;">
-          <div class="label">解析結果</div>
-          <div class="pill" id="analysisText">未解析</div>
-        </div>
-        <div class="row">
-          <button id="applyEstimatedBpmBtn">推定BPMを適用</button>
-          <button id="calcBarsFromCurrentBtn">現在BPMで小節再計算</button>
+            <div class="toolbar-block">
+              <div class="toolbar-title">解析 / レイテンシ</div>
+              <div class="analysis-strip">
+                <div>
+                  <div class="label">解析結果</div>
+                  <div class="pill analysis-pill" id="analysisText">未解析</div>
+                </div>
+                <div class="toolbar-mini-actions">
+                  <div class="toolbar-field" style="min-width:78px;">
+                    <div class="label">遅延ms</div>
+                    <input id="latencyMsInput" type="number" min="0" max="500" step="5" value="120" />
+                  </div>
+                  <button id="calibrateBtn">自動測定</button>
+                  <button id="analyzeTrackBtn">トラック解析</button>
+                  <button id="applyEstimatedBpmBtn">推定BPM適用</button>
+                  <button id="calcBarsFromCurrentBtn">小節再計算</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="toolbar-block">
+              <div class="toolbar-title">Danger</div>
+              <div class="toolbar-mini-actions" style="justify-content:flex-start;">
+                <button id="clearTrackBtn">Track削除</button>
+                <button id="clearAllBtn">全消去</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
