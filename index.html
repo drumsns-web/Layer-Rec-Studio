@@ -412,6 +412,23 @@
       }
     }
     @media (max-width: 760px) {
+
+      .transport-primary {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .transport-primary .transport-big {
+        min-height: 58px;
+        font-size: 17px;
+      }
+      .transport-secondary {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .transport-secondary button {
+        min-height: 44px;
+        font-size: 13px;
+      }
       .grid {
         grid-template-columns: repeat(2, minmax(120px, 1fr));
       }
@@ -662,6 +679,40 @@
       border-radius: 8px;
       font-size: 11px;
     }
+    
+    .transport-block {
+      gap: 8px;
+    }
+    .transport-primary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .transport-primary .transport-big {
+      min-height: 54px;
+      padding: 10px 8px;
+      border-radius: 14px;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: .01em;
+    }
+    .transport-secondary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .transport-secondary button {
+      min-height: 42px;
+      padding: 8px 8px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .transport-secondary #overwriteRecBtn.active,
+    .transport-secondary #countBtn.active {
+      outline-width: 2px;
+    }
+
     .toolbar-settings {
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -1025,17 +1076,19 @@
               </div>
             </div>
 
-            <div class="toolbar-block">
-              <div class="toolbar-title">Transport</div>
-              <div class="toolbar-actions">
-                <button id="toStartBtn">|◀</button>
-                <button id="playBtn" class="primary">▶</button>
-                <button id="stopBtn">■</button>
-                <button id="recBtn" class="danger">●</button>
+            <div class="toolbar-block transport-block">
+              <div class="toolbar-title">Master Transport</div>
+              <div class="transport-primary">
+                <button id="playBtn" class="primary transport-big">▶ 再生</button>
+                <button id="stopBtn" class="transport-big">■ 停止</button>
+                <button id="recBtn" class="danger transport-big">● 録音</button>
+              </div>
+              <div class="transport-secondary">
+                <button id="toStartBtn">|◀ 先頭</button>
                 <button id="appendRecBtn">追加</button>
                 <button id="overwriteRecBtn" class="active">上書</button>
-                <button id="loopBtn">↻</button>
-                <button id="metroBtn">♩</button>
+                <button id="loopBtn">↻ Loop</button>
+                <button id="metroBtn">♩ Metro</button>
                 <button id="countBtn" class="active">Count</button>
                 <button id="micToggleBtn">MIC</button>
                 <button id="monitorBtn">Mon</button>
