@@ -6,22 +6,38 @@
   <title>Layer Rec Studio</title>
   <style>
     :root {
-      --bg: #10131a;
-      --panel: #171c25;
-      --panel2: #202736;
-      --line: #313a4f;
+      --bg: #0d1117;
+      --panel: #141b24;
+      --panel2: #1c2432;
+      --line: #2d3950;
       --text: #f5f7fb;
       --muted: #99a7c2;
-      --accent: #55d0ff;
+      --accent: #3fb8ff;
       --good: #6be39a;
-      --danger: #ff5e7a;
+      --danger: #ff3b5c;
       --warn: #ffd36f;
     }
+
+    @keyframes recPulse {
+      0% { transform: scale(1); box-shadow: 0 0 0 rgba(255,59,92,0); }
+      50% { transform: scale(1.03); box-shadow: 0 0 0 6px rgba(255,59,92,0.14), 0 0 24px rgba(255,59,92,0.34); }
+      100% { transform: scale(1); box-shadow: 0 0 0 rgba(255,59,92,0); }
+    }
+    @keyframes selectedTrackGlow {
+      0% { box-shadow: 0 0 0 rgba(63,184,255,0), inset 0 0 0 rgba(255,59,92,0); }
+      50% { box-shadow: 0 0 0 1px rgba(63,184,255,0.2), 0 0 22px rgba(63,184,255,0.2), inset 0 0 26px rgba(255,59,92,0.07); }
+      100% { box-shadow: 0 0 0 rgba(63,184,255,0), inset 0 0 0 rgba(255,59,92,0); }
+    }
+    @keyframes recBadgeBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .62; }
+    }
+
     * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: linear-gradient(180deg, #0d1016, #121824 45%, #0c0f15);
+      background: linear-gradient(180deg, #0a0d13, #0f1520 46%, #0a0c12);
       color: var(--text);
     }
     .app { max-width: 1320px; margin: 0 auto; padding: 16px; padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
@@ -51,15 +67,54 @@
       font-weight: 700; cursor: pointer;
     }
     button:hover { filter: brightness(1.06); }
-    button.primary { background: #1d418f; border-color: #2b63ff; }
-    button.good { background: #1e5636; border-color: #2b8a53; }
-    button.danger { background: #5b2434; border-color: #934055; }
+    button.primary { background: #173a80; border-color: #2b63ff; box-shadow: inset 0 1px 0 rgba(255,255,255,.05); }
+    button.good { background: #194c31; border-color: #2f8a56; }
+    button.danger { background: #6e1830; border-color: #d03b5b; }
     button.active { outline: 2px solid var(--accent); }
     button:disabled { opacity: .55; cursor: not-allowed; }
     .pill {
       padding: 7px 10px; border-radius: 999px; background: #131923;
       border: 1px solid var(--line); font-size: 12px;
     }
+
+    button {
+      transition: transform .12s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease, filter .18s ease;
+      box-shadow: 0 8px 20px rgba(0,0,0,.16);
+    }
+    button:active {
+      transform: translateY(1px) scale(.985);
+    }
+    .track.selected {
+      outline: 2px solid var(--accent);
+      box-shadow: 0 0 0 1px rgba(63,184,255,.18), 0 10px 28px rgba(0,0,0,.22), 0 0 26px rgba(63,184,255,.10);
+    }
+    .track.selected .wave-wrap {
+      border-color: rgba(63,184,255,.52);
+      box-shadow: inset 0 0 0 1px rgba(63,184,255,.08);
+    }
+    button.active {
+      outline: 2px solid var(--accent);
+      box-shadow: 0 0 0 1px rgba(63,184,255,.20), 0 0 18px rgba(63,184,255,.16);
+    }
+    body.recording-live #recBtn {
+      background: linear-gradient(180deg, #9d1938, #6e1830);
+      border-color: #ff5e7b;
+      animation: recPulse 1.1s ease-in-out infinite;
+    }
+    body.recording-live #statusText {
+      border-color: rgba(255,59,92,.45);
+      box-shadow: 0 0 20px rgba(255,59,92,.16);
+      animation: recBadgeBlink 1.1s ease-in-out infinite;
+    }
+    body.recording-live .track.selected {
+      border-color: rgba(255,59,92,.72);
+      animation: selectedTrackGlow 1.1s ease-in-out infinite;
+    }
+    body.recording-live .track.selected .wave-wrap {
+      border-color: rgba(255,59,92,.55);
+      box-shadow: 0 0 0 1px rgba(255,59,92,.18), 0 0 28px rgba(255,59,92,.12);
+    }
+
     .transport {
       display: flex; gap: 12px; justify-content: space-between; align-items: flex-start; flex-wrap: wrap;
     }
@@ -1481,10 +1536,16 @@
       renderTracks();
     }
 
+    function updateRecordingUi() {
+      document.body.classList.toggle('recording-live', !!isRecording);
+      document.body.classList.toggle('metronome-live', !!standaloneMetronome);
+    }
+
     function updateModeUi() {
       document.body.classList.remove('mode-record', 'mode-edit', 'mode-mix');
       document.body.classList.add(`mode-${state.viewMode}`);
       modeButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.modeBtn === state.viewMode));
+      updateRecordingUi();
     }
 
     function setViewMode(mode) {
@@ -1547,6 +1608,7 @@
       if (removeTrackBtn) removeTrackBtn.disabled = visibleCount <= MIN_VISIBLE_TRACKS;
       $('loopBtn').classList.toggle('active', state.loop);
       updateTransportInfo();
+      updateRecordingUi();
       updateModeUi();
     }
 
@@ -1817,6 +1879,7 @@
       stopBeatVisual();
       updateMetroButtonUi();
       updateModeUi();
+      updateRecordingUi();
       if (!isPlaying && !isRecording) {
         positionText.textContent = Number(state.timelineCursorTime || 0).toFixed(2);
         setStatus('Stopped');
@@ -1861,6 +1924,7 @@
       metronomeSchedulerTimer = setInterval(scheduler, 80);
       updateMetroButtonUi();
       updateModeUi();
+      updateRecordingUi();
       setStatus('Metronome');
     }
 
@@ -2045,6 +2109,7 @@ updatePlayheads();
       positionText.textContent = Number(state.timelineCursorTime || 0).toFixed(2);
       playbackVisualOffset = state.timelineCursorTime || 0;
       stopBeatVisual();
+      updateRecordingUi();
       setStatus('Stopped');
     }
 
@@ -2170,6 +2235,7 @@ updatePlayheads();
         mediaRecorder.start(100);
         isRecording = true;
         visualMode = 'record';
+        updateRecordingUi();
         setStatus(recordMode === 'append' ? '追加録音中' : '録音中');
       }, delayMs);
 
@@ -2177,6 +2243,7 @@ updatePlayheads();
         if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
         isRecording = false;
         isPlaying = false;
+        updateRecordingUi();
         stopAllSources();
         stopScheduledClicks();
         stopBeatVisual();
