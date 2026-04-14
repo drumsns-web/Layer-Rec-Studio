@@ -125,6 +125,39 @@
     }
     .track.selected { outline: 2px solid var(--accent); }
     .track-top { display: grid; grid-template-columns: 64px 1fr 240px; gap: 10px; align-items: center; }
+    .track-local-transport {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .track-local-transport button {
+      min-height: 44px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      font-size: 13px;
+      letter-spacing: .01em;
+    }
+    .track-local-transport .local-play {
+      background: linear-gradient(180deg, #173a80, #102a5e);
+      border-color: #2b63ff;
+    }
+    .track-local-transport .local-stop {
+      background: linear-gradient(180deg, #2b3140, #202633);
+      border-color: #4a556e;
+    }
+    .track-local-transport .local-overwrite {
+      background: linear-gradient(180deg, #7f1934, #611328);
+      border-color: #ff5e7b;
+    }
+    .track-local-transport .local-append {
+      background: linear-gradient(180deg, #194c31, #123824);
+      border-color: #2f8a56;
+    }
+    .track-local-transport .local-mode-active {
+      box-shadow: 0 0 0 1px rgba(63,184,255,.26), 0 0 18px rgba(63,184,255,.16);
+      outline: 2px solid rgba(63,184,255,.72);
+    }
     .track-body { display: grid; grid-template-columns: repeat(6, minmax(90px, 1fr)); gap: 10px; }
     .track-fx { display: grid; grid-template-columns: repeat(5, minmax(90px, 1fr)); gap: 10px; }
     .select-btn { min-width: 54px; }
@@ -490,6 +523,17 @@
       grid-template-columns: 46px 1fr 190px;
       gap: 6px;
     }
+    .track-local-transport {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .track-local-transport button {
+      min-height: 38px;
+      font-size: 12px;
+      padding: 6px 8px;
+      border-radius: 10px;
+    }
     .track-body, .track-fx {
       gap: 6px;
       grid-template-columns: repeat(6, minmax(70px, 1fr));
@@ -536,6 +580,9 @@
         grid-template-columns: 46px 1fr;
       }
       .track-top > :last-child { grid-column: 1 / -1; }
+      .track-local-transport {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
       .track-body, .track-fx {
         grid-template-columns: repeat(3, minmax(80px, 1fr));
       }
@@ -1509,6 +1556,12 @@
               <input data-import="${i}" type="file" accept="audio/*,video/*" />
             </div>
           </div>
+          <div class="track-local-transport">
+            <button class="local-play" data-local-play="${i}">▶ 再生</button>
+            <button class="local-stop" data-local-stop="${i}">■ 停止</button>
+            <button class="local-overwrite" data-local-overwrite="${i}">● 上書録音</button>
+            <button class="local-append" data-local-append="${i}">⊕ 追加録音</button>
+          </div>
           <div class="wave-wrap">
             <canvas class="wave" data-index="${i}" width="900" height="78"></canvas>
             <div class="playhead"></div>
@@ -1580,6 +1633,14 @@
         if (muteBtn) muteBtn.classList.toggle('active', track.mute);
         if (soloBtn) soloBtn.classList.toggle('active', track.solo);
         el.querySelector('.meta-text').textContent = formatTrackMeta(track);
+        const localPlayBtn = el.querySelector('[data-local-play]');
+        const localStopBtn = el.querySelector('[data-local-stop]');
+        const localOverwriteBtn = el.querySelector('[data-local-overwrite]');
+        const localAppendBtn = el.querySelector('[data-local-append]');
+        if (localPlayBtn) localPlayBtn.classList.toggle('active', i === state.selectedTrack && isPlaying && !isRecording);
+        if (localStopBtn) localStopBtn.disabled = !(isPlaying || isRecording);
+        if (localOverwriteBtn) localOverwriteBtn.classList.toggle('local-mode-active', i === state.selectedTrack && recordMode === 'overwrite');
+        if (localAppendBtn) localAppendBtn.classList.toggle('local-mode-active', i === state.selectedTrack && recordMode === 'append');
         const selectedClip = getSelectedClip(track);
         el.querySelector('[data-gain]').value = selectedClip ? selectedClip.gain : 1;
         el.querySelector('[data-pan]').value = selectedClip ? selectedClip.pan : 0;
@@ -2088,6 +2149,62 @@ tracks.forEach((track, i) => {
 updatePlayheads();
 
       setStatus(state.loop ? 'Loop Playing' : 'Playing');
+    }
+
+
+    async function playSingleTrack(index) {
+      await ensureAudio();
+      const track = tracks[index];
+      state.selectedTrack = index;
+      renderTracks();
+      if (!track || !track.clips.length) {
+        setStatus(`Track ${index + 1} は空です`);
+        return;
+      }
+      if (isRecording) stopTransport();
+      if (standaloneMetronome) stopStandaloneMetronome();
+      isPlaying = false;
+      clearTimeout(recordStopTimer);
+      stopAllSources();
+      stopScheduledClicks();
+
+      const fullDuration = Math.max(0.1, getTrackDuration(track));
+      const startOffset = clamp(state.timelineCursorTime || 0, 0, fullDuration);
+      const duration = Math.max(0.1, fullDuration - startOffset);
+      playbackCycleDuration = duration;
+      playbackVisualOffset = startOffset;
+      isPlaying = true;
+      playStartedAt = audioCtx.currentTime + 0.04;
+
+      const scheduleCycle = (cycleStart) => {
+        if (!isPlaying) return;
+        if (state.metro) {
+          const beats = Math.max(1, Math.ceil(duration / beatDuration()));
+          scheduleMetronome(cycleStart, beats);
+        }
+        playTrack(track, cycleStart, null, startOffset);
+        if (state.loop) {
+          setTimeout(() => scheduleCycle(cycleStart + duration), Math.max(10, duration * 1000 - 30));
+        } else {
+          setTimeout(() => {
+            if (!state.loop && isPlaying) {
+              isPlaying = false;
+              stopScheduledClicks();
+              stopBeatVisual();
+              updateRecordingUi();
+              renderTracks();
+              setStatus('Stopped');
+            }
+          }, Math.max(20, duration * 1000 + 60));
+        }
+      };
+
+      scheduleCycle(playStartedAt);
+      startBeatVisual('play', playStartedAt, duration, state.loop);
+      updatePlayheads();
+      updateRecordingUi();
+      renderTracks();
+      setStatus(`Track ${index + 1} を再生`);
     }
 
     function stopTransport() {
@@ -2906,13 +3023,46 @@ updatePlayheads();
       clickVol.oninput = () => { state.clickVolume = Number(clickVol.value); if (clickGain) clickGain.gain.value = state.clickVolume; };
       latencyMsInput.oninput = () => { state.latencyMs = Number(latencyMsInput.value || 120); };
 
-      tracksWrap.addEventListener('click', (e) => {
+      tracksWrap.addEventListener('click', async (e) => {
         const select = e.target.closest('[data-select]');
         const mute = e.target.closest('[data-mute]');
         const solo = e.target.closest('[data-solo]');
+        const localPlay = e.target.closest('[data-local-play]');
+        const localStop = e.target.closest('[data-local-stop]');
+        const localOverwrite = e.target.closest('[data-local-overwrite]');
+        const localAppend = e.target.closest('[data-local-append]');
         if (select) { state.selectedTrack = Number(select.dataset.select); renderTracks(); }
         if (mute) { const i = Number(mute.dataset.mute); tracks[i].mute = !tracks[i].mute; renderTracks(); }
         if (solo) { const i = Number(solo.dataset.solo); tracks[i].solo = !tracks[i].solo; renderTracks(); }
+        if (localPlay) {
+          const i = Number(localPlay.dataset.localPlay);
+          try { await playSingleTrack(i); } catch (err) { alert('トラック再生に失敗しました: ' + err.message); }
+          return;
+        }
+        if (localStop) {
+          state.selectedTrack = Number(localStop.dataset.localStop);
+          stopTransport();
+          renderTracks();
+          return;
+        }
+        if (localOverwrite) {
+          const i = Number(localOverwrite.dataset.localOverwrite);
+          state.selectedTrack = i;
+          recordMode = 'overwrite';
+          updateRecordModeButtons();
+          renderTracks();
+          try { await recordSelectedTrack(); } catch (err) { alert('録音に失敗しました: ' + err.message); }
+          return;
+        }
+        if (localAppend) {
+          const i = Number(localAppend.dataset.localAppend);
+          state.selectedTrack = i;
+          recordMode = 'append';
+          updateRecordModeButtons();
+          renderTracks();
+          try { await recordSelectedTrack(); } catch (err) { alert('録音に失敗しました: ' + err.message); }
+          return;
+        }
       });
       tracksWrap.addEventListener('input', async (e) => {
         const t = e.target;
