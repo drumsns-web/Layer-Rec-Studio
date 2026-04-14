@@ -897,7 +897,7 @@
 <body>
   <div class="app"><div class="app-shell">
     <h1>LAYER REC STUDIO</h1>
-    <div class="sub">多重録音・音源取込・WAV書き出し対応。</div>
+    <div class="sub">多重録音・音源取込・WAV/MP3書き出し対応。</div>
 
     <div class="top-actions sticky">
       <div class="studio-toolbar">
@@ -991,6 +991,7 @@
                   <button id="loadIdbBtn">↺ 読込</button>
                   <button id="deleteIdbBtn" class="danger">✕ 削除</button>
                   <button id="exportWavBtn" class="good">↓ WAV</button>
+                  <button id="exportMp3Btn" class="good">↓ MP3</button>
                   <button id="saveProjectBtn">↗ JSON</button>
                   <label class="file-mini-label">JSON読込<input id="loadProjectInput" type="file" accept="application/json" /></label>
                 </div>
@@ -2437,6 +2438,51 @@ updatePlayheads();
       return new Blob([ab], { type: 'audio/wav' });
     }
 
+    let lameJsLoader = null;
+
+    function loadLameJs() {
+      if (window.lamejs) return Promise.resolve(window.lamejs);
+      if (lameJsLoader) return lameJsLoader;
+      lameJsLoader = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js';
+        script.onload = () => window.lamejs ? resolve(window.lamejs) : reject(new Error('lamejsの読み込みに失敗しました'));
+        script.onerror = () => reject(new Error('MP3エンコーダを読み込めませんでした。ネット接続を確認してください。'));
+        document.head.appendChild(script);
+      });
+      return lameJsLoader;
+    }
+
+    function floatTo16BitPCM(float32Array) {
+      const pcm = new Int16Array(float32Array.length);
+      for (let i = 0; i < float32Array.length; i++) {
+        const s = clamp(float32Array[i] || 0, -1, 1);
+        pcm[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      }
+      return pcm;
+    }
+
+    async function audioBufferToMp3(buffer, kbps = 192) {
+      const lamejs = await loadLameJs();
+      const channels = Math.min(2, Math.max(1, buffer.numberOfChannels || 1));
+      const sampleRate = buffer.sampleRate || 44100;
+      const mp3encoder = new lamejs.Mp3Encoder(channels, sampleRate, kbps);
+      const left = floatTo16BitPCM(buffer.getChannelData(0));
+      const right = channels > 1 ? floatTo16BitPCM(buffer.getChannelData(1)) : null;
+      const blockSize = 1152;
+      const mp3Data = [];
+      for (let i = 0; i < left.length; i += blockSize) {
+        const leftChunk = left.subarray(i, i + blockSize);
+        const mp3buf = channels > 1
+          ? mp3encoder.encodeBuffer(leftChunk, right.subarray(i, i + blockSize))
+          : mp3encoder.encodeBuffer(leftChunk);
+        if (mp3buf.length) mp3Data.push(new Int8Array(mp3buf));
+      }
+      const end = mp3encoder.flush();
+      if (end.length) mp3Data.push(new Int8Array(end));
+      return new Blob(mp3Data, { type: 'audio/mpeg' });
+    }
+
     function downloadBlob(blob, filename) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -2768,6 +2814,7 @@ updatePlayheads();
       $('loadIdbBtn').onclick = async () => { try { await loadProjectFromDB(); } catch (e) { alert('読込に失敗しました: ' + e.message); } };
       $('deleteIdbBtn').onclick = async () => { try { await deleteProjectFromDB(); } catch (e) { alert('削除に失敗しました: ' + e.message); } };
       $('exportWavBtn').onclick = async () => { try { const mixed = await renderMixdownBuffer(); downloadBlob(audioBufferToWav(mixed), `layerrec-mix-${Date.now()}.wav`); setStatus('WAV exported'); } catch (e) { alert('WAV書き出しに失敗しました: ' + e.message); } };
+      $('exportMp3Btn').onclick = async () => { try { setStatus('MP3を書き出し中...'); const mixed = await renderMixdownBuffer(); const mp3 = await audioBufferToMp3(mixed, 192); downloadBlob(mp3, `layerrec-mix-${Date.now()}.mp3`); setStatus('MP3 exported'); } catch (e) { alert('MP3書き出しに失敗しました: ' + e.message); setStatus('MP3 export failed'); } };
       $('calibrateBtn').onclick = async () => { try { await autoCalibrateLatency(); } catch (e) { alert('自動測定に失敗しました: ' + e.message); } };
       $('analyzeTrackBtn').onclick = async () => { try { await analyzeSelectedTrack(false); } catch (e) { alert('素材解析に失敗しました: ' + e.message); } };
       $('applyEstimatedBpmBtn').onclick = async () => { try { const result = lastAnalysis || await analyzeSelectedTrack(false); if (!result?.estimatedBpm) throw new Error('推定BPMを取得できませんでした'); state.bpm = clamp(Number(result.estimatedBpm), 40, 240); bpmInput.value = String(state.bpm); if (bpmSlider) bpmSlider.value = String(state.bpm); updateTransportInfo(); renderTracks(); updateAnalysisText(`${analysisText.textContent} / 推定BPMを適用しました`); } catch (e) { alert('推定BPM適用に失敗しました: ' + e.message); } };
