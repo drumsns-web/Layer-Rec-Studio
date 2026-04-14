@@ -1045,6 +1045,17 @@
       .track-counter { width: 100%; text-align: center; }
     }
 
+
+    .mode-tabs button.record-mode.active {
+      background: linear-gradient(135deg, #7a1226 0%, #c81e3a 55%, #ff3b5c 100%);
+      border-color: #ff4c6d;
+      color: #ffffff;
+      box-shadow: 0 0 0 1px rgba(255,76,109,.35) inset, 0 0 18px rgba(255,59,92,.28);
+    }
+    .mode-tabs button.record-mode.active:hover {
+      filter: brightness(1.04);
+    }
+
 </style>
 </head>
 <body>
@@ -1639,6 +1650,7 @@
       if (title) title.textContent = 'クリップ編集';
       const editMeta = document.querySelector('.card .meta');
       if (editMeta) editMeta.textContent = 'タイムラインをクリックでクリップ選択・カーソル移動。ダブルクリックまたは分割ボタンで分割します。';
+      syncModeButtonStyles();
       renderTracks();
     }
 
@@ -1670,6 +1682,15 @@
       if (track.reverbMix > 0.01) parts.push(`rev ${Math.round(track.reverbMix * 100)}%`);
       if (track.delayMix > 0.01) parts.push(`dly ${Math.round(track.delayMix * 100)}%`);
       return parts.join(' · ');
+    }
+
+    
+    function syncModeButtonStyles() {
+      const modeButtons = document.querySelectorAll('.mode-tabs [data-mode]');
+      modeButtons.forEach(btn => {
+        const isRecord = btn.dataset.mode === 'record';
+        btn.classList.toggle('record-mode', isRecord);
+      });
     }
 
     function renderTracks() {
@@ -3140,6 +3161,7 @@ updatePlayheads();
     }
 
     async function boot() {
+      syncModeButtonStyles();
       setupTracks();
       bindEvents();
       bindTrackTapSelection();
